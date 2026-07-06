@@ -5,10 +5,10 @@ export async function getScript(id: string): Promise<ApiResponse<Script>> {
   return apiGet<Script>(`/api/script/${id}`)
 }
 
-export async function saveDraft(data: SaveDraftRequest): Promise<ApiResponse<Script>> {
+export async function saveDraft(data: SaveDraftRequest & { id?: string }): Promise<ApiResponse<Script>> {
   return apiPost<Script>('/api/script/draft', data)
 }
 
 export async function updateDraft(id: string, data: SaveDraftRequest): Promise<ApiResponse<Script>> {
-  return apiPost<Script>(`/api/script/${id}/draft`, data)
+  return apiPost<Script>('/api/script/draft', { ...data, id })
 }

@@ -6,7 +6,7 @@ services:
     environment:
       POSTGRES_DB: koubo
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
+      POSTGRES_PASSWORD: "${DB_PASSWORD:-postgres}"
     ports:
       - "5432:5432"
     volumes:
@@ -17,6 +17,7 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
+    restart: unless-stopped
 
   redis:
     image: redis:7-alpine
@@ -27,17 +28,20 @@ services:
       interval: 5s
       timeout: 3s
       retries: 5
+    restart: unless-stopped
 
   api:
-    build: .
+    build:
+      context: .
+      dockerfile: Dockerfile
     ports:
       - "8080:8080"
     environment:
       PORT: "8080"
-      DATABASE_URL: "postgres://postgres:postgres@postgres:5432/koubo?sslmode=disable"
+      DATABASE_URL: "postgres://postgres:${DB_PASSWORD:-postgres}@postgres:5432/koubo?sslmode=disable"
       REDIS_URL: "redis:6379"
-      LLM_API_KEY: "${LLM_API_KEY:-placeholder}"
-      LLM_BASE_URL: "${LLM_BASE_URL:-https://ark.cn-beijing.volces.com/api/v3}"
+      LLM_API_KEY: "${LLM_API_KEY}"
+      LLM_BASE_URL: "${LLM_BASE_URL:-https://api.deepseek.com}"
       ASR_APP_ID: "${ASR_APP_ID:-}"
       ASR_TOKEN: "${ASR_TOKEN:-}"
       OSS_BUCKET: "${OSS_BUCKET:-}"
@@ -52,13 +56,16 @@ services:
     restart: unless-stopped
 
   worker:
-    build: .
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: ["./koubo-worker"]  # separate worker binary (if needed) or re-use api binary with worker mode
     environment:
       PORT: "8081"
-      DATABASE_URL: "postgres://postgres:postgres@postgres:5432/koubo?sslmode=disable"
+      DATABASE_URL: "postgres://postgres:${DB_PASSWORD:-postgres}@postgres:5432/koubo?sslmode=disable"
       REDIS_URL: "redis:6379"
-      LLM_API_KEY: "${LLM_API_KEY:-placeholder}"
-      LLM_BASE_URL: "${LLM_BASE_URL:-https://ark.cn-beijing.volces.com/api/v3}"
+      LLM_API_KEY: "${LLM_API_KEY}"
+      LLM_BASE_URL: "${LLM_BASE_URL:-https://api.deepseek.com}"
       ASR_APP_ID: "${ASR_APP_ID:-}"
       ASR_TOKEN: "${ASR_TOKEN:-}"
       OSS_BUCKET: "${OSS_BUCKET:-}"

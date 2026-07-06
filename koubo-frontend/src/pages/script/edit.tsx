@@ -46,7 +46,7 @@ export default function EditPage() {
     if (saving) return
     setSaving(true)
     try {
-      const res = await saveDraft({ title, content, script_type: scriptType, style })
+      const res = await saveDraft({ id: scriptId ?? undefined, title, content, script_type: scriptType, style })
       if (res.success) {
         if (res.data?.id) setScriptId(res.data.id)
         toast.success('已保存草稿')

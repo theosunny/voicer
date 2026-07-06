@@ -7,43 +7,72 @@
   border-radius: var(--radius-md);
   font-family: var(--font-display);
   font-weight: 600;
-  cursor: pointer;
-  user-select: none;
+  letter-spacing: -0.2px;
   transition: all var(--duration-fast) var(--ease-out);
   position: relative;
   overflow: hidden;
 
-  &--sm { padding: var(--space-1) var(--space-3); font-size: var(--text-sm); }
-  &--md { padding: var(--space-3) var(--space-6); font-size: var(--text-base); }
-  &--lg { padding: var(--space-4) var(--space-8); font-size: var(--text-md); }
+  &--sm { padding: var(--space-1) var(--space-3); font-size: var(--text-sm); border-radius: var(--radius-sm); }
+  &--md { padding: var(--space-2) var(--space-5); font-size: var(--text-base); }
+  &--lg { padding: var(--space-3) var(--space-6); font-size: var(--text-md); }
 
   &--full { width: 100%; }
 
   &--primary {
     background: var(--color-primary);
     color: #fff;
-    box-shadow: 0 0 12px rgba(108, 99, 255, 0.4), 0 0 24px rgba(108, 99, 255, 0.15);
+    box-shadow: var(--glow-primary);
 
     &:active:not(.glow-btn--inert) {
-      box-shadow: 0 0 20px rgba(108, 99, 255, 0.7), 0 0 40px rgba(108, 99, 255, 0.35);
+      opacity: 0.88;
+      transform: scale(0.98);
+    }
+  }
+
+  &--cyan {
+    background: var(--color-cyan);
+    color: #fff;
+    box-shadow: var(--glow-cyan);
+
+    &:active:not(.glow-btn--inert) {
+      opacity: 0.88;
       transform: scale(0.98);
     }
   }
 
   &--danger {
-    background: var(--color-hot);
+    background: var(--color-coral);
     color: #fff;
-    box-shadow: 0 0 12px rgba(255, 45, 120, 0.4), 0 0 24px rgba(255, 45, 120, 0.15);
+    box-shadow: var(--glow-coral);
 
     &:active:not(.glow-btn--inert) {
-      box-shadow: 0 0 20px rgba(255, 45, 120, 0.7), 0 0 40px rgba(255, 45, 120, 0.35);
+      opacity: 0.88;
       transform: scale(0.98);
     }
   }
 
+  &--outline {
+    background: transparent;
+    color: var(--color-primary);
+    border: 1px solid var(--border-active);
+
+    &:active:not(.glow-btn--inert) {
+      background: var(--color-primary-dim);
+    }
+  }
+
+  &--ghost {
+    background: rgba(255, 255, 255, 0.5);
+    color: var(--color-text-2);
+    border: 1px solid var(--border-default);
+
+    &:active:not(.glow-btn--inert) {
+      background: rgba(255, 255, 255, 0.8);
+    }
+  }
+
   &--inert {
-    opacity: 0.5;
-    cursor: not-allowed;
+    opacity: 0.4;
     box-shadow: none;
   }
 

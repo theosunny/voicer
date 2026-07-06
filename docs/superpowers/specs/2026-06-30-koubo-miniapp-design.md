@@ -1,7 +1,8 @@
 # 口播一站式小程序 · 产品设计文档
 
 **日期**: 2026-06-30  
-**状态**: 待实现
+**最后更新**: 2026-07-07  
+**状态**: ✅ MVP 核心功能已实现
 
 ---
 
@@ -11,22 +12,20 @@
 
 核心价值：降低口播内容创作门槛——从文案生成、录制提词、到视频剪辑，一站式完成。
 
-第二阶段引入**广告商口播市场**，创作者认领广告任务录制并按效果分成。
-
 ---
 
 ## 2. 技术栈
 
 | 层级 | 技术选型 | 说明 |
 |------|---------|------|
-| 端（前端） | Taro (React) | 一套代码出微信 + 抖音小程序 |
-| API 服务 | Go + Hertz | 字节系框架，高性能 |
+| 端（前端） | Taro 4.2 (React 18) | 一套代码出微信 + 抖音小程序 |
+| API 服务 | Go 1.26 + Hertz | 高性能 HTTP + WebSocket |
 | 异步任务队列 | Asynq + Redis | Go 生态成熟的任务队列 |
 | 视频处理 | FFmpeg（os/exec 调用） | 剪辑、字幕叠入 |
-| AI 文案生成 | LLM API（国内大模型，如火山方舟） | 流式 SSE 返回 |
-| 实时 ASR | 火山引擎 / 讯飞流式 ASR WebSocket | 提词器位置匹配 |
-| 对象存储 | 阿里云 OSS / 腾讯 COS | 视频、字幕文件 |
-| 数据库 | PostgreSQL | 用户、文案、视频、任务数据 |
+| AI 文案生成 | **DeepSeek** (`deepseek-chat`) | OpenAI 兼容格式，SSE 流式返回 |
+| 实时 ASR | **火山引擎** 流式 ASR | HTTP API / WebSocket → 滑动窗口文案匹配 |
+| 对象存储 | 阿里云 OSS / 本地存储 | 视频、音频文件 |
+| 数据库 | PostgreSQL 16 + GORM | 用户、文案、视频数据 |
 
 ---
 
@@ -34,178 +33,206 @@
 
 ```
 ┌─────────────────────────────────────────┐
-│         端：Taro (React)                │
-│   微信小程序 / 抖音小程序               │
-│  [文案生成] [提词器+录制] [我的视频]    │
-│  [爆款模板] [广告任务市场]（二期）      │
+│       端：Taro (React)                  │
+│  微信小程序                              │
+│  [模板浏览] [文案生成] [提词器+录制]     │
+│  [我的作品] [视频处理]                   │
 └──────────────┬──────────────────────────┘
-               │ HTTPS / WSS
+               │ HTTPS / WSS (CORS)
 ┌──────────────▼──────────────────────────┐
 │     API 网关：Go + Hertz                │
-│  POST /api/script/generate              │
-│  WS   /api/asr/stream                  │
+│  POST /api/script/generate (SSE)       │
+│  POST /api/script/draft                │
+│  GET  /api/script/:id                   │
+│  WS   /api/asr/stream (ASR)            │
 │  POST /api/video/submit                 │
 │  GET  /api/video/:id/status            │
 │  GET  /api/templates/trending           │
-│  ---  /api/ads/** （二期）              │
 └──────┬──────────────┬───────────────────┘
        │              │
 ┌──────▼──────┐  ┌────▼──────────────────┐
-│  LLM API    │  │  Redis + Asynq        │
-│ (文案生成)  │  │  (视频剪辑异步队列)   │
+│  DeepSeek   │  │  Redis + Asynq        │
+│  (文案生成) │  │  (视频剪辑任务队列)   │
 └─────────────┘  └────┬──────────────────┘
                       │
                ┌──────▼──────────┐
                │  FFmpeg Worker  │
-               │  (Go subprocess)│
+               │  (去静默+字幕)  │
                └──────┬──────────┘
                       │
                ┌──────▼──────────┐
-               │  对象存储 OSS   │
-               │  视频 / 字幕    │
+               │  本地 /uploads  │
+               │  视频 / 音频    │
                └─────────────────┘
 ```
 
 ---
 
-## 4. 模块设计
+## 4. MVP 完成情况
 
-### 4.1 AI 文案生成
+### ✅ 已完成
 
-**输入**：
-- 方式一：选择热门领域，选择推荐的热门关键词或文案，选择风格，定制生成专属文案
-- 方式二：主题关键词自由输入，如"防晒霜夏季促销"或"关于坚持的感悟"，选择风格，定制生成专属文案
-- 内容类型：产品推广 / 个人感悟 / 生活分享
-- 目标时长：30s / 60s / 3min
+| 模块 | 功能 | 状态 |
+|------|------|------|
+| **模板浏览** | 首页 Feed、领域筛选、精选标记、无限滚动 | ✅ |
+| **AI 文案生成** | 领域推荐 / 自由输入、风格选择、DeepSeek SSE 流式生成 | ✅ |
+| **文案编辑** | 加载已有文案、内容编辑、字数统计、保存草稿 | ✅ |
+| **提词器 + 录制** | 文案自动滚动（ASR + 时间双驱动）、前置摄像头自拍、PCM 录音采集 | ✅ |
+| **试听 + 保存** | 录制完成弹窗 → 试听播放 → 提交后端 | ✅ |
+| **视频处理状态** | 轮询状态、完成展示、试听/保存 | ✅ |
+| **后端 API 完整链路** | 文案生成、草稿保存、模板列表、视频提交、状态查询、ASR WebSocket | ✅ |
+| **CORS 中间件** | 全路由跨域支持 | ✅ |
+| **DeepSeek LLM** | 替换火山方舟为 DeepSeek，兼容 OpenAI 格式 | ✅ |
+| **主题** | 奶油白磨玻璃设计（暗黑 → 苹果风格） | ✅ |
+| **图标** | 81×81 Pillow 生成 PNG，系统自动着色 | ✅ |
+| **部署** | `scripts/deploy.sh` (dev/docker/prod) + `Dockerfile` + `docker-compose.yml` + `docs/deploy.md` | ✅ |
 
-**流程**：
-1. 端提交参数 → `POST /api/script/generate`
-2. 后端拼 Prompt，调 LLM API，SSE 流式返回文案内容
-3. 文案按段落结构化存储，每段附带**预估朗读时长**（按字数 / 平均语速 4字/s 估算）
-4. 前端展示后用户可**自由编辑**，编辑即实时保存草稿
-5. 确认文案后进入录制流程
+### ⚠ 待接入
 
-**爆款模板模块**：
-- 首页 Feed 展示热门模板（按用户收藏数 / 使用次数排序）
-- 运营可人工标注精选
-- 用户点击模板 → 填入自己主题关键词 → 一键套用结构生成文案
+| 模块 | 说明 | 优先级 |
+|------|------|--------|
+| **ASR 真实识别** | WebSocket 通路已建、PCM 采集已就绪、滑动窗口匹配已实现。接入火山引擎 APP ID + Token 即可启用 | 🟡 中 |
+| **OSS 视频存储** | 当前 `.env` 中 OSS 为占位符，文件本地存入 `uploads/` 目录。生产环境需接入阿里云 OSS | 🟡 中 |
+| **FFmpeg 视频剪辑** | Worker 代码已编写（去静默 + SRT 字幕 + 硬编码），需要真实视频文件联调测试 | 🟡 中 |
+| **通知推送** | 视频处理完成后无通知，当前靠轮询 | 🟢 低 |
 
----
+### 🔲 二期规划
 
-### 4.2 提词器 + 录制
-
-**界面布局**：
-```
-┌─────────────────────────────┐
-│  上一句（灰色）              │
-│  ████ 当前朗读句高亮 ████   │  ← 实时 ASR 定位
-│  下一句（灰色）              │
-│  ...                        │
-├─────────────────────────────┤
-│  [● 录制]  [⏸ 暂停]  [↺ 重来] │
-└─────────────────────────────┘
-```
-
-**ASR 驱动滚动流程**：
-1. 用户点击录制，端开启 RecorderManager（PCM 16kHz mono）
-2. 音频分片（每 200ms）通过 WebSocket 发至 `/api/asr/stream`
-3. 服务端转发音频流至火山引擎 / 讯飞流式 ASR
-4. ASR 返回识别文字 → 后端做**滑动窗口匹配**（与当前文案段落比对）
-5. 匹配到位置后 → WebSocket 推回 `{paragraph_index, word_index}` 滚动指令
-6. 端平滑滚动至对应段落，高亮当前句
-
-**帧标记**：
-- 每次收到 ASR 位置回调时，记录 `{text_pos, video_timestamp_ms}` 到本地列表
-- 停顿超过 2s 时，标记为"长停顿"节点（剪辑时可自动切除）
-
-**断线重连**：
-- WebSocket 断开后自动重连（最多 3 次），断连期间本地缓冲音频分片，重连后补发
+| 模块 | 说明 |
+|------|------|
+| **抖音小程序适配** | Taro 框架已支持，TT 平台编译 + 调试 |
+| **广告商口播市场** | 广告主发任务 → 创作者认领 → 录制提交 → 审核 → 分成结算 |
+| **数据统计看板** | 创作历史、播放量、使用次数统计 |
+| **视频水印/品牌定制** | 广告主 Logo、专属字幕样式 |
+| **多语言生成** | 英文、日文口播文案 |
 
 ---
 
-### 4.3 视频自动剪辑
-
-**端侧上传**：录制完成 → 上传原始视频文件 + 帧标记 JSON + 文案文本 → `POST /api/video/submit`
-
-**后端入队**：Hertz 收到请求 → 写入 Asynq 队列 → 返回 `{video_id}` 给端
-
-**FFmpeg Worker 处理链**：
-1. 按"长停顿"标记切除静默片段
-2. 使用 ASR 识别结果生成 `.srt` 字幕文件
-3. FFmpeg 将字幕硬编码叠入视频（可选字幕样式）
-4. 输出 MP4 → 上传 OSS → 更新数据库状态为 `completed`
-
-**端侧状态轮询**：
-- 视频提交后端进入轮询模式（`GET /api/video/:id/status`，每 3s 一次）
-- 状态为 `completed` 时展示下载/分享按钮
-- 用户切出小程序再回来，进入时主动请求最新状态
-
----
-
-### 4.4 广告商口播市场（二期）
-
-**角色**：
-- **广告主**：上传产品信息（图片、卖点、话术要求）
-- **平台**：用 AI 生成标准口播稿，审核上架为"广告任务"
-- **创作者**：浏览任务市场 → 认领 → 用模块 2/3 录制 → 提交审核
-
-**分成逻辑**：
-- 广告主设定预算（按完成视频数 或 按播放量）
-- 视频审核通过后，按规则自动结算至创作者账户
-
-**数据模型（二期新增）**：
-- `AdTask`：任务信息、预算、截止日期、状态
-- `AdScript`：AI 生成的广告口播稿
-- `AdSubmission`：创作者提交记录、视频 ID、审核状态、结算金额
-
----
-
-## 5. 数据模型（MVP）
+## 5. 数据模型（已实施）
 
 ```
 User
   id, openid, platform(wechat/douyin), nickname, avatar, created_at
 
 Script
-  id, user_id, title, content(text), type(promo/insight/life),
-  duration_estimate(s), status(draft/confirmed), created_at
+  id, user_id, title, content(text), script_type(promo/insight/life),
+  style(casual/professional/emotional), duration_estimate(s),
+  status(draft/confirmed), created_at, updated_at
 
 Video
   id, user_id, script_id, raw_video_url, processed_video_url,
-  frame_markers(jsonb), status(processing/completed/failed),
-  created_at, completed_at
+  frame_markers(jsonb), asr_result(text), status(processing/completed/failed),
+  error_msg, created_at, completed_at
 
 Template
-  id, title, content_structure(text), usage_count, is_featured, created_at
+  id, title, domain, content_structure(text), usage_count, is_featured, created_at
+```
+
+### 实际偏离设计处
+
+| 类别 | 原设计 | 实际 |
+|------|--------|------|
+| LLM | 火山方舟（豆包） | **DeepSeek** (`deepseek-chat`)，兼容 OpenAI 格式 |
+| DB 驱动 | pgx 连接池 | **GORM** + postgres driver |
+| Go 版本 | 1.22 | **1.26** |
+| 前端主题 | 暗黑 HUD 霓虹 | **奶油白磨玻璃** |
+| WSL2 网络 | 手动端口映射 | `networkingMode=mirrored` |
+| OSS | 阿里云 OSS | 本地 `uploads/` 目录（OSS 代码保留，替换 Key 即切换） |
+
+### API 响应格式统一
+
+所有接口返回 `{success: true, data: ...}` 格式，兼容前端 `ApiResponse<T>` 类型：
+
+| 接口 | 请求 | 响应 |
+|------|------|------|
+| `POST /api/script/generate` | `{topic, style, duration, ...}` | SSE 流 `{type:"chunk", content:"..."}` → `{type:"done", script_id:"..."}` |
+| `POST /api/script/draft` | `{title, content, script_type, style}` | `{success, data: {id, ...}}` |
+| `GET /api/script/:id` | — | `{success, data: {...}}` |
+| `GET /api/templates/trending` | `?domain=&limit=10&page=1` | `{success, data: [...], total, page, limit}` |
+| `POST /api/video/submit` | multipart `video + script_id + frame_markers` | `{success, data: {video_id}}` |
+| `GET /api/video/:id/status` | — | `{success, data: {status, processed_video_url, ...}}` |
+
+### 中英文字段映射
+
+前端 UI 使用中文标签（如"产品推广"），后端自动映射为 DB 英文枚举（`promo`）：
+
+| 前端 | 后端 DB |
+|------|---------|
+| 产品推广 | `promo` |
+| 个人感悟 / 知识科普 / 情感故事 | `insight` |
+| 生活分享 | `life` |
+| 轻松随性 / 幽默风趣 | `casual` |
+| 专业权威 | `professional` |
+| 情感共鸣 | `emotional` |
+| 30s / 60s / 3min | 30 / 60 / 180 秒 |
+
+---
+
+## 6. ASR 语音追踪
+
+```
+前端 PCM 音频帧 → WebSocket /api/asr/stream
+                  → 后端缓冲 2s → 火山引擎 HTTP ASR
+                  → 识别文本 → 滑动窗口匹配文案位置
+                  → 推回 {paragraph_index, word_index}
+前端收到位置 → 设置 currentPara → 文案自动滚动 + 高亮
+```
+
+当前 ASR 未接入真实服务时，自动退化到时间估算滚动（中文 ~4字/秒）。
+
+---
+
+## 7. 录制页布局
+
+```
+┌─────────────────────────────────┐
+│   📷 前置摄像头 (36vh)           │
+│     ●REC  01:23                │
+├─────────────────────────────────┤
+│  已读段落 (淡灰)                 │
+│  ██ 当前 · 大字高亮 ██          │
+│  🎤 AI 追踪中                  │
+│  下一段 ...                     │
+├─────────────────────────────────┤
+│  ⏸ 暂停    ●    ↩ 重录         │
+└─────────────────────────────────┘
 ```
 
 ---
 
-## 6. 关键技术风险与对策
+## 8. 文件结构（实际）
 
-| 风险 | 对策 |
-|------|------|
-| ASR 延迟导致滚动滞后 | 客户端预测滚动（按语速估算位置），ASR 结果到达后做校正 |
-| 小程序 WebSocket 前台限制 | 用户切后台时暂停录制，提示用户保持前台 |
-| FFmpeg 处理超时 | Asynq 任务设置 30min 超时，失败自动重试 2 次，超时标记 failed |
-| 视频文件上传失败 | 分片上传 + 断点续传，端侧保留原始视频直到服务端确认 |
-| LLM 生成内容质量不稳定 | Prompt 模板精调 + 用户可编辑兜底 |
-
----
-
-## 7. 分阶段交付
-
-**Phase 1 · MVP（创作者工具）**
-- 文案 AI 生成 + 用户编辑
-- 提词器 + ASR 滚动录制
-- 基础视频剪辑（去静默 + 字幕）
-- 我的视频列表
-
-**Phase 2 · 内容发现**
-- 爆款模板 Feed
-- 用户收藏 / 分享文案
-
-**Phase 3 · 广告市场**
-- 广告主端
-- 任务市场 + 认领 + 提交
-- 分成结算
+```
+voicer/
+├── scripts/
+│   └── deploy.sh                 # 一键部署 (dev/docker/prod)
+├── docs/
+│   ├── deploy.md                 # 部署指南
+│   ├── superpowers/
+│   │   ├── specs/
+│   │   │   └── 2026-06-30-koubo-miniapp-design.md  # 本文档
+│   │   └── plans/
+│   │       └── 2026-06-30-koubo-backend-plan.md    # 后端实现计划
+│   └── ui-specs/
+│       └── frontend-ui-spec.md                     # UI 规格
+├── koubo-backend/
+│   ├── main.go
+│   ├── Dockerfile / docker-compose.yml / .env.example
+│   ├── config/config.go
+│   ├── db/db.go + migrations/001_init.sql
+│   ├── handler/{script, asr, video, template}.go
+│   ├── model/{user, script, video, template}.go
+│   ├── repo/{user, script, video, template}.go
+│   ├── service/{script, asr, video}.go
+│   ├── worker/{worker, ffmpeg}.go
+│   └── storage/oss.go
+└── koubo-frontend/
+    ├── config/{index, dev, prod}.ts
+    ├── src/
+    │   ├── pages/{index, create, videos, profile, script/generate, script/edit, record, video/status}
+    │   ├── components/{chip, glow-button, hud-card, step-progress, toast}
+    │   ├── api/{client, script, template, video}.ts
+    │   ├── hooks/{useSSE, useASRSocket, useVideoPoller}.ts
+    │   └── styles/{tokens, global, typography, mixins}.scss
+    └── project.config.json
+```

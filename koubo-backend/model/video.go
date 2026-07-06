@@ -8,8 +8,11 @@ import (
 )
 
 type FrameMarker struct {
-	TextPos          int `json:"text_pos"`
-	VideoTimestampMs int `json:"video_timestamp_ms"`
+	ParagraphIndex int `json:"paragraph_index"` // frontend sends this
+	WordIndex      int `json:"word_index"`      // frontend sends this
+	TimestampMs    int `json:"timestamp_ms"`    // frontend sends this
+	TextPos        int `json:"text_pos"`        // legacy
+	VideoTimestampMs int `json:"video_timestamp_ms"` // legacy
 }
 
 // FrameMarkers is a GORM custom type for []FrameMarker stored as JSONB.

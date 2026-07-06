@@ -56,7 +56,7 @@ func (s *ScriptService) BuildPrompt(req model.ScriptGenerateRequest) string {
 // Returns when streaming is complete or context is cancelled.
 func (s *ScriptService) GenerateStream(ctx context.Context, prompt string, chunkCh chan<- string) error {
 	body, _ := json.Marshal(map[string]any{
-		"model":  "doubao-pro-4k",
+		"model":  "deepseek-chat",
 		"stream": true,
 		"messages": []map[string]string{
 			{"role": "user", "content": prompt},

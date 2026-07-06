@@ -1,7 +1,6 @@
 package handler
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -9,7 +8,8 @@ import (
 	"koubo-backend/model"
 	"koubo-backend/repo"
 	"koubo-backend/service"
-	"koubo-backend/storage"
+	"os"
+	"path/filepath"
 
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/cloudwego/hertz/pkg/protocol/consts"
@@ -18,20 +18,23 @@ import (
 type VideoHandler struct {
 	videoRepo *repo.VideoRepo
 	videoSvc  *service.VideoService
-	ossClient *storage.OSSClient
+	uploadDir string // local fallback when OSS is not configured
 }
 
-func NewVideoHandler(videoRepo *repo.VideoRepo, videoSvc *service.VideoService, ossClient *storage.OSSClient) *VideoHandler {
-	return &VideoHandler{videoRepo: videoRepo, videoSvc: videoSvc, ossClient: ossClient}
+func NewVideoHandler(videoRepo *repo.VideoRepo, videoSvc *service.VideoService, uploadDir string) *VideoHandler {
+	if uploadDir == "" {
+		uploadDir = "uploads"
+	}
+	os.MkdirAll(uploadDir, 0755)
+	return &VideoHandler{videoRepo: videoRepo, videoSvc: videoSvc, uploadDir: uploadDir}
 }
 
 // Submit handles POST /api/video/submit (multipart form)
 // Form fields:
-//   - video: binary file
+//   - video: binary file (audio mp3 from RecorderManager)
 //   - script_id: string
 //   - frame_markers: JSON array
 //   - asr_result: string
-//   - user_id: string
 func (h *VideoHandler) Submit(ctx context.Context, c *app.RequestContext) {
 	userID := string(c.FormValue("user_id"))
 	if userID == "" {
@@ -46,21 +49,21 @@ func (h *VideoHandler) Submit(ctx context.Context, c *app.RequestContext) {
 
 	fileHeader, err := c.FormFile("video")
 	if err != nil {
-		c.JSON(consts.StatusBadRequest, map[string]string{"error": "video file required"})
+		c.JSON(consts.StatusBadRequest, map[string]any{"success": false, "error": "video file required"})
 		return
 	}
 
 	file, err := fileHeader.Open()
 	if err != nil {
-		c.JSON(consts.StatusInternalServerError, map[string]string{"error": "cannot open file"})
+		c.JSON(consts.StatusInternalServerError, map[string]any{"success": false, "error": "cannot open file"})
 		return
 	}
 	defer file.Close()
 
-	videoData, err := io.ReadAll(file)
-	if err != nil {
-		c.JSON(consts.StatusInternalServerError, map[string]string{"error": "cannot read file"})
-		return
+	// Detect file extension from content type or use .mp3 default
+	ext := ".mp3"
+	if ct := fileHeader.Header.Get("Content-Type"); ct == "audio/mp4" || ct == "video/mp4" {
+		ext = ".m4a"
 	}
 
 	var scriptIDPtr *string
@@ -68,6 +71,7 @@ func (h *VideoHandler) Submit(ctx context.Context, c *app.RequestContext) {
 		scriptIDPtr = &scriptID
 	}
 
+	// First create DB record to get an ID
 	v := &model.Video{
 		UserID:       userID,
 		ScriptID:     scriptIDPtr,
@@ -76,50 +80,74 @@ func (h *VideoHandler) Submit(ctx context.Context, c *app.RequestContext) {
 		Status:       "processing",
 	}
 
-	// Upload raw video to OSS if client available
-	if h.ossClient != nil {
-		key := fmt.Sprintf("videos/raw/%s.mp4", userID)
-		url, err := h.ossClient.Upload(ctx, key, bytes.NewReader(videoData))
-		if err != nil {
-			c.JSON(consts.StatusInternalServerError, map[string]string{"error": "upload failed"})
-			return
-		}
-		v.RawVideoURL = url
-	}
-
-	// Save to DB
 	if h.videoRepo != nil {
 		if err := h.videoRepo.Create(ctx, v); err != nil {
-			c.JSON(consts.StatusInternalServerError, map[string]string{"error": "db error"})
+			c.JSON(consts.StatusInternalServerError, map[string]any{"success": false, "error": "db error: " + err.Error()})
 			return
 		}
 	} else {
 		v.ID = "mock-video-id"
 	}
 
-	// Enqueue processing task
-	if h.videoSvc != nil {
-		_ = h.videoSvc.EnqueueProcess(ctx, v.ID)
+	// Save uploaded file to local disk
+	localPath := filepath.Join(h.uploadDir, v.ID+ext)
+	dst, err := os.Create(localPath)
+	if err != nil {
+		c.JSON(consts.StatusInternalServerError, map[string]any{"success": false, "error": "cannot save file"})
+		return
+	}
+	defer dst.Close()
+
+	if _, err := io.Copy(dst, file); err != nil {
+		c.JSON(consts.StatusInternalServerError, map[string]any{"success": false, "error": "write failed"})
+		return
 	}
 
-	c.JSON(consts.StatusOK, map[string]string{"video_id": v.ID})
+	// Store local path as raw URL (can be served via static file handler)
+	rawURL := fmt.Sprintf("/uploads/%s%s", v.ID, ext)
+	if h.videoRepo != nil {
+		// Update the record with the raw URL — use direct DB update
+		h.videoRepo.UpdateStatus(ctx, v.ID, "processing", rawURL, "")
+		v.RawVideoURL = rawURL
+	}
+
+	// Enqueue processing task (will just mark as completed for audio-only MVP)
+	if h.videoSvc != nil {
+		_ = h.videoSvc.EnqueueProcess(ctx, v.ID)
+	} else {
+		// No queue — mark completed immediately
+		if h.videoRepo != nil {
+			_ = h.videoRepo.UpdateStatus(ctx, v.ID, "completed", rawURL, "")
+		}
+	}
+
+	c.JSON(consts.StatusOK, map[string]any{
+		"success": true,
+		"data":    map[string]string{"video_id": v.ID},
+	})
 }
 
 // Status handles GET /api/video/:id/status
 func (h *VideoHandler) Status(ctx context.Context, c *app.RequestContext) {
 	id := c.Param("id")
 	if h.videoRepo == nil {
-		c.JSON(consts.StatusOK, model.VideoStatusResponse{Status: "processing"})
+		c.JSON(consts.StatusOK, map[string]any{
+			"success": true,
+			"data":    model.VideoStatusResponse{Status: "completed"},
+		})
 		return
 	}
 	v, err := h.videoRepo.GetByID(ctx, id)
 	if err != nil {
-		c.JSON(consts.StatusNotFound, map[string]string{"error": "not found"})
+		c.JSON(consts.StatusNotFound, map[string]any{"success": false, "error": "not found"})
 		return
 	}
-	c.JSON(consts.StatusOK, model.VideoStatusResponse{
-		Status:            v.Status,
-		ProcessedVideoURL: v.ProcessedVideoURL,
-		ErrorMsg:          v.ErrorMsg,
+	c.JSON(consts.StatusOK, map[string]any{
+		"success": true,
+		"data": model.VideoStatusResponse{
+			Status:            v.Status,
+			ProcessedVideoURL: v.ProcessedVideoURL,
+			ErrorMsg:          v.ErrorMsg,
+		},
 	})
 }

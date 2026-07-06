@@ -4,94 +4,112 @@ import type { ASRPosition } from '../types/api'
 import { API_BASE } from '../api/client'
 
 interface ASRMessage {
-  type: 'position' | 'partial' | 'error'
+  type: string
   paragraph_index?: number
   word_index?: number
-  text?: string
-  error?: string
+  recognized?: string
 }
 
 interface UseASRSocketResult {
   position: ASRPosition | null
   recognizing: string
   connected: boolean
-  send: (audio: ArrayBuffer) => void
+  sendPCM: (audio: ArrayBuffer) => void
   disconnect: () => void
 }
 
-const MAX_RETRIES = 3
-const RETRY_DELAY_MS = 1500
+const MAX_RETRIES = 2
 
-export function useASRSocket(scriptParagraphs: string[], enabled: boolean): UseASRSocketResult {
+export function useASRSocket(
+  scriptId: string | null,
+  scriptContent: string,
+  enabled: boolean,
+): UseASRSocketResult {
   const [position, setPosition] = useState<ASRPosition | null>(null)
   const [recognizing, setRecognizing] = useState('')
   const [connected, setConnected] = useState(false)
 
-  const socketRef = useRef<null>(null)
+  const socketRef = useRef<Taro.SocketTask | null>(null)
+  const connectedRef = useRef(false)
   const retriesRef = useRef(0)
-  const audioQueueRef = useRef<ArrayBuffer[]>([])
-  const enabledRef = useRef(enabled)
-  enabledRef.current = enabled
+  const queueRef = useRef<ArrayBuffer[]>([])
+  const unmountedRef = useRef(false)
 
-  const connectSocket = useCallback(() => {
+  // Sync connected state to ref for safe cleanup
+  useEffect(() => { connectedRef.current = connected }, [connected])
+  useEffect(() => { unmountedRef.current = false; return () => { unmountedRef.current = true } }, [])
+
+  const closeQuietly = useCallback((task: Taro.SocketTask | null) => {
+    if (!task || !connectedRef.current) return
+    connectedRef.current = false
+    try { task.close({ code: 1000, reason: 'done' }) } catch { /* already closed */ }
+  }, [])
+
+  const connect = useCallback(() => {
+    if (!enabled || !scriptId || unmountedRef.current) return
+
     const wsUrl = API_BASE.replace(/^http/, 'ws') + '/api/asr/stream'
 
-    Taro.onSocketOpen(() => {
-      retriesRef.current = 0
+    const task = Taro.connectSocket({ url: wsUrl })
+    socketRef.current = task
+
+    task.onOpen(() => {
+      if (unmountedRef.current) { closeQuietly(task); return }
       setConnected(true)
-      Taro.sendSocketMessage({ data: JSON.stringify({ type: 'init', paragraphs: scriptParagraphs }) })
-      while (audioQueueRef.current.length > 0) {
-        const buf = audioQueueRef.current.shift()!
-        Taro.sendSocketMessage({ data: buf })
+      retriesRef.current = 0
+      task.send({
+        data: JSON.stringify({ script_id: scriptId, content: scriptContent }),
+      })
+      while (queueRef.current.length > 0) {
+        const buf = queueRef.current.shift()!
+        try { task.send({ data: buf }) } catch {}
       }
     })
 
-    Taro.onSocketMessage((evt: Taro.onSocketMessage.CallbackResult) => {
+    task.onMessage((res) => {
+      if (unmountedRef.current) return
       try {
-        const msg = JSON.parse(evt.data as string) as ASRMessage
-        if (msg.type === 'position' && msg.paragraph_index !== undefined) {
-          setPosition({ paragraph_index: msg.paragraph_index, word_index: msg.word_index ?? 0 })
-        } else if (msg.type === 'partial' && msg.text) {
-          setRecognizing(msg.text)
+        const msg = JSON.parse(res.data as string) as ASRMessage
+        if (msg.paragraph_index !== undefined) {
+          setPosition({
+            paragraph_index: msg.paragraph_index,
+            word_index: msg.word_index ?? 0,
+            timestamp_ms: Date.now(),
+          })
         }
+        if (msg.recognized) setRecognizing(msg.recognized)
       } catch { /* ignore */ }
     })
 
-    Taro.onSocketClose(() => {
+    task.onClose(() => {
       setConnected(false)
-      if (enabledRef.current && retriesRef.current < MAX_RETRIES) {
-        retriesRef.current += 1
-        setTimeout(() => { if (enabledRef.current) connectSocket() }, RETRY_DELAY_MS)
+      if (!unmountedRef.current && enabled && retriesRef.current < MAX_RETRIES) {
+        retriesRef.current++
+        setTimeout(connect, 1500)
       }
     })
 
-    Taro.onSocketError(() => { setConnected(false) })
-
-    Taro.connectSocket({ url: wsUrl, success: () => {}, fail: () => {} })
-  }, [scriptParagraphs])
+    task.onError(() => setConnected(false))
+  }, [enabled, scriptId, scriptContent, closeQuietly])
 
   useEffect(() => {
-    if (!enabled) return
-    connectSocket()
-    return () => {
-      Taro.closeSocket({})
-      setConnected(false)
-    }
-  }, [enabled, connectSocket])
+    if (enabled) connect()
+    return () => { closeQuietly(socketRef.current) }
+  }, [enabled, connect, closeQuietly])
 
-  const send = useCallback((audio: ArrayBuffer) => {
-    if (connected) {
-      Taro.sendSocketMessage({ data: audio })
-    } else {
-      audioQueueRef.current.push(audio)
+  const sendPCM = useCallback((audio: ArrayBuffer) => {
+    const task = socketRef.current
+    if (task && connectedRef.current) {
+      try { task.send({ data: audio }) } catch {}
+    } else if (queueRef.current.length < 50) {
+      queueRef.current.push(audio)
     }
-  }, [connected])
-
-  const disconnect = useCallback(() => {
-    Taro.closeSocket({})
-    setConnected(false)
-    retriesRef.current = MAX_RETRIES
   }, [])
 
-  return { position, recognizing, connected, send, disconnect }
+  const disconnect = useCallback(() => {
+    closeQuietly(socketRef.current)
+    retriesRef.current = MAX_RETRIES
+  }, [closeQuietly])
+
+  return { position, recognizing, connected, sendPCM, disconnect }
 }

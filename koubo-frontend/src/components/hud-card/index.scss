@@ -3,68 +3,16 @@
 .hud-card {
   position: relative;
   background: var(--bg-surface);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border-glass);
+  box-shadow: var(--shadow-soft);
   padding: var(--space-4);
 
-  --hud-size: 12px;
-  --hud-thick: 1.5px;
-  --hud-color: var(--color-primary);
+  &--primary { border-color: rgba(91, 106, 191, 0.15); }
+  &--cyan    { border-color: rgba(58, 161, 200, 0.15); }
+  &--hot     { border-color: rgba(232, 129, 107, 0.15); }
 
-  &--primary { --hud-color: var(--color-primary); }
-  &--cyan    { --hud-color: var(--color-cyan); }
-  &--hot     { --hud-color: var(--color-hot); }
-
-  &::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: var(--hud-size);
-    height: var(--hud-size);
-    border-top: var(--hud-thick) solid var(--hud-color);
-    border-left: var(--hud-thick) solid var(--hud-color);
-    border-radius: var(--radius-sm) 0 0 0;
-    pointer-events: none;
-  }
-
-  &::after {
-    content: '';
-    position: absolute;
-    bottom: 0;
-    right: 0;
-    width: var(--hud-size);
-    height: var(--hud-size);
-    border-bottom: var(--hud-thick) solid var(--hud-color);
-    border-right: var(--hud-thick) solid var(--hud-color);
-    border-radius: 0 0 var(--radius-sm) 0;
-    pointer-events: none;
-  }
-
-  .hud-card__corner--tr {
-    position: absolute;
-    top: 0;
-    right: 0;
-    width: var(--hud-size);
-    height: var(--hud-size);
-    border-top: var(--hud-thick) solid var(--hud-color);
-    border-right: var(--hud-thick) solid var(--hud-color);
-    border-radius: 0 var(--radius-sm) 0 0;
-    pointer-events: none;
-  }
-
-  .hud-card__corner--bl {
-    position: absolute;
-    bottom: 0;
-    left: 0;
-    width: var(--hud-size);
-    height: var(--hud-size);
-    border-bottom: var(--hud-thick) solid var(--hud-color);
-    border-left: var(--hud-thick) solid var(--hud-color);
-    border-radius: 0 0 0 var(--radius-sm);
-    pointer-events: none;
-  }
-
-  .hud-card__content {
+  &__content {
     position: relative;
     z-index: 1;
   }

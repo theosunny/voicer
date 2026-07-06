@@ -8,7 +8,6 @@ import (
 	"koubo-backend/model"
 	"koubo-backend/repo"
 	"koubo-backend/storage"
-	"log"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -49,46 +48,70 @@ func (w *FFmpegWorker) processVideo(ctx context.Context, videoID string) error {
 	}
 	defer os.RemoveAll(tmpDir)
 
-	// Download raw video from OSS
-	rawPath := filepath.Join(tmpDir, "raw.mp4")
-	if err := w.downloadToFile(ctx, video.RawVideoURL, rawPath); err != nil {
-		return w.fail(ctx, videoID, fmt.Sprintf("download failed: %v", err))
+	// Get raw file — either from OSS or local disk
+	rawPath := filepath.Join(tmpDir, "raw.mp3")
+	if w.ossClient == nil {
+		// Local file: copy from uploads/
+		localFile := filepath.Join("uploads", videoID+".mp3")
+		if _, statErr := os.Stat(localFile); statErr != nil {
+			// try .m4a
+			localFile = filepath.Join("uploads", videoID+".m4a")
+			if _, statErr := os.Stat(localFile); statErr != nil {
+				return w.fail(ctx, videoID, fmt.Sprintf("local file not found: %v", statErr))
+			}
+		}
+		src, err := os.Open(localFile)
+		if err != nil {
+			return w.fail(ctx, videoID, fmt.Sprintf("open local file: %v", err))
+		}
+		defer src.Close()
+		dst, err := os.Create(rawPath)
+		if err != nil {
+			return w.fail(ctx, videoID, fmt.Sprintf("create tmp file: %v", err))
+		}
+		defer dst.Close()
+		if _, err := io.Copy(dst, src); err != nil {
+			return w.fail(ctx, videoID, fmt.Sprintf("copy file: %v", err))
+		}
+	} else {
+		if err := w.downloadToFile(ctx, video.RawVideoURL, rawPath); err != nil {
+			return w.fail(ctx, videoID, fmt.Sprintf("download failed: %v", err))
+		}
 	}
 
-	// Cut silence based on frame markers
-	trimmedPath := filepath.Join(tmpDir, "trimmed.mp4")
-	if err := cutSilence(rawPath, trimmedPath, video.FrameMarkers); err != nil {
-		log.Printf("silence cut failed, using raw: %v", err)
-		trimmedPath = rawPath
+	// For audio-only MVP: just use the raw file as output
+	// (future: cut silence, burn subtitles, etc.)
+	outPath := filepath.Join(tmpDir, "output.mp3")
+
+	// Copy raw to output (placeholder for future FFmpeg processing)
+	src, _ := os.Open(rawPath)
+	if src != nil {
+		defer src.Close()
+		dst, _ := os.Create(outPath)
+		if dst != nil {
+			defer dst.Close()
+			io.Copy(dst, src)
+		}
 	}
 
-	// Generate SRT from ASR result
-	srtPath := filepath.Join(tmpDir, "subs.srt")
-	if err := generateSRT(srtPath, video.ASRResult, video.FrameMarkers); err != nil {
-		log.Printf("SRT generation failed, skipping subtitles: %v", err)
-		srtPath = ""
+	// Upload to OSS or serve from local
+	if w.ossClient != nil {
+		f, err := os.Open(outPath)
+		if err != nil {
+			return w.fail(ctx, videoID, fmt.Sprintf("open output: %v", err))
+		}
+		defer f.Close()
+		key := fmt.Sprintf("videos/processed/%s.mp3", videoID)
+		url, err := w.ossClient.Upload(ctx, key, f)
+		if err != nil {
+			return w.fail(ctx, videoID, fmt.Sprintf("upload failed: %v", err))
+		}
+		return w.videoRepo.UpdateStatus(ctx, videoID, "completed", url, "")
 	}
 
-	// Burn subtitles
-	outPath := filepath.Join(tmpDir, "output.mp4")
-	if err := burnSubtitles(trimmedPath, srtPath, outPath); err != nil {
-		return w.fail(ctx, videoID, fmt.Sprintf("ffmpeg encode failed: %v", err))
-	}
-
-	// Upload to OSS
-	f, err := os.Open(outPath)
-	if err != nil {
-		return w.fail(ctx, videoID, fmt.Sprintf("open output: %v", err))
-	}
-	defer f.Close()
-
-	key := fmt.Sprintf("videos/processed/%s.mp4", videoID)
-	url, err := w.ossClient.Upload(ctx, key, f)
-	if err != nil {
-		return w.fail(ctx, videoID, fmt.Sprintf("upload failed: %v", err))
-	}
-
-	return w.videoRepo.UpdateStatus(ctx, videoID, "completed", url, "")
+	// No OSS — mark completed with local URL
+	localURL := fmt.Sprintf("/uploads/%s.mp3", videoID)
+	return w.videoRepo.UpdateStatus(ctx, videoID, "completed", localURL, "")
 }
 
 func (w *FFmpegWorker) fail(ctx context.Context, videoID, msg string) error {
@@ -132,24 +155,24 @@ func cutSilence(inputPath, outputPath string, markers model.FrameMarkers) error 
 	sorted := make([]model.FrameMarker, len(markers))
 	copy(sorted, markers)
 	sort.Slice(sorted, func(i, j int) bool {
-		return sorted[i].VideoTimestampMs < sorted[j].VideoTimestampMs
+		return sorted[i].TimestampMs < sorted[j].TimestampMs
 	})
 
 	// Find silence gaps > 2000ms and build keep segments
 	type segment struct{ start, end float64 }
 	var segments []segment
-	segStart := float64(sorted[0].VideoTimestampMs) / 1000.0
+	segStart := float64(sorted[0].TimestampMs) / 1000.0
 
 	for i := 1; i < len(sorted); i++ {
-		gap := sorted[i].VideoTimestampMs - sorted[i-1].VideoTimestampMs
+		gap := sorted[i].TimestampMs - sorted[i-1].TimestampMs
 		if gap > 2000 {
 			// End current segment at previous marker
-			segments = append(segments, segment{segStart, float64(sorted[i-1].VideoTimestampMs) / 1000.0})
-			segStart = float64(sorted[i].VideoTimestampMs) / 1000.0
+			segments = append(segments, segment{segStart, float64(sorted[i-1].TimestampMs) / 1000.0})
+			segStart = float64(sorted[i].TimestampMs) / 1000.0
 		}
 	}
 	// Add final segment
-	last := float64(sorted[len(sorted)-1].VideoTimestampMs) / 1000.0
+	last := float64(sorted[len(sorted)-1].TimestampMs) / 1000.0
 	segments = append(segments, segment{segStart, last + 1.0})
 
 	if len(segments) <= 1 {
@@ -194,11 +217,11 @@ func generateSRT(srtPath, asrResult string, markers model.FrameMarkers) error {
 	sorted := make([]model.FrameMarker, len(markers))
 	copy(sorted, markers)
 	sort.Slice(sorted, func(i, j int) bool {
-		return sorted[i].VideoTimestampMs < sorted[j].VideoTimestampMs
+		return sorted[i].TimestampMs < sorted[j].TimestampMs
 	})
 
-	totalMs := sorted[len(sorted)-1].VideoTimestampMs - sorted[0].VideoTimestampMs
-	startOffset := sorted[0].VideoTimestampMs
+	totalMs := sorted[len(sorted)-1].TimestampMs - sorted[0].TimestampMs
+	startOffset := sorted[0].TimestampMs
 
 	f, err := os.Create(srtPath)
 	if err != nil {

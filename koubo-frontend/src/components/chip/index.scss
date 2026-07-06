@@ -8,26 +8,22 @@
   font-size: var(--text-sm);
   font-family: var(--font-body);
   color: var(--color-text-2);
-  background: var(--bg-elevated);
+  background: var(--bg-glass);
   border: 1px solid var(--border-default);
-  cursor: pointer;
   transition: all var(--duration-fast) var(--ease-out);
   white-space: nowrap;
-  user-select: none;
 
   &:active:not(.chip--disabled) {
     transform: scale(0.95);
   }
 
   &--selected {
-    color: var(--color-cyan);
-    background: var(--color-cyan-dim);
+    color: var(--color-primary);
+    background: var(--color-primary-soft);
     border-color: var(--border-active);
-    box-shadow: 0 0 8px rgba(0, 229, 255, 0.2);
   }
 
   &--disabled {
     opacity: 0.4;
-    cursor: not-allowed;
   }
 }

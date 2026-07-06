@@ -2,7 +2,7 @@
   "miniprogramRoot": "dist/",
   "projectname": "koubo-frontend",
   "description": "口播创作小程序",
-  "appid": "YOUR_WEAPP_APPID",
+  "appid": "touristappid",
   "setting": {
     "urlCheck": false,
     "es6": false,

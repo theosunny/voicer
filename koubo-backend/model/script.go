@@ -22,8 +22,10 @@ type ScriptGenerateRequest struct {
 	Domain      string `json:"domain"`      // used when mode=domain
 	Keywords    string `json:"keywords"`
 	Topic       string `json:"topic"`       // used when mode=free
-	Style       string `json:"style"`       // "casual" | "professional" | "emotional"
-	ScriptType  string `json:"script_type"` // "promo" | "insight" | "life"
+	Style       string `json:"style"`       // "casual" | "professional" | "emotional" or Chinese label
+	ScriptType  string `json:"script_type"` // "promo" | "insight" | "life" or Chinese label
+	Duration    string `json:"duration"`    // "30s" | "60s" | "3min" — from frontend
 	DurationSec int    `json:"duration_sec"`
 	UserID      string `json:"user_id"`
+	TemplateID  string `json:"template_id"`
 }

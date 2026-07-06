@@ -14,22 +14,22 @@
   font-size: var(--text-sm);
   font-family: var(--font-body);
   white-space: nowrap;
-  backdrop-filter: blur(12px);
+  box-shadow: var(--shadow-elevated);
   animation: toast-in var(--duration-fast) var(--ease-out);
 
   &--success {
     background: var(--color-success-dim);
-    border: 1px solid var(--color-success);
+    border: 1px solid rgba(76, 175, 80, 0.3);
     color: var(--color-success);
   }
   &--error {
     background: var(--color-error-dim);
-    border: 1px solid var(--color-error);
+    border: 1px solid rgba(224, 85, 85, 0.3);
     color: var(--color-error);
   }
   &--info {
     background: var(--color-primary-dim);
-    border: 1px solid var(--color-primary);
+    border: 1px solid var(--border-active);
     color: var(--color-primary);
   }
 

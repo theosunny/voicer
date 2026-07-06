@@ -9,6 +9,7 @@ build/
 out/
 .next/
 .nuxt/
+.swc/
 
 # Environment & secrets
 .env
@@ -25,6 +26,10 @@ vendor/
 *.dylib
 *.test
 *.out
+koubo-server
+
+# Runtime data
+koubo-backend/uploads/
 
 # OS
 .DS_Store

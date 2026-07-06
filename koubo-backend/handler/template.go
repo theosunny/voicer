@@ -29,7 +29,13 @@ func (h *TemplateHandler) List(ctx context.Context, c *app.RequestContext) {
 	}
 
 	if h.templateRepo == nil {
-		c.JSON(consts.StatusOK, map[string]any{"templates": []model.Template{}})
+		c.JSON(consts.StatusOK, map[string]any{
+			"success": true,
+			"data":    []model.Template{},
+			"total":   0,
+			"page":    1,
+			"limit":   limit,
+		})
 		return
 	}
 
@@ -41,5 +47,11 @@ func (h *TemplateHandler) List(ctx context.Context, c *app.RequestContext) {
 	if templates == nil {
 		templates = []model.Template{}
 	}
-	c.JSON(consts.StatusOK, map[string]any{"templates": templates})
+	c.JSON(consts.StatusOK, map[string]any{
+		"success": true,
+		"data":    templates,
+		"total":   len(templates),
+		"page":    1,
+		"limit":   limit,
+	})
 }

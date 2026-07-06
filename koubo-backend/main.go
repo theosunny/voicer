@@ -34,9 +34,11 @@ func main() {
 	scriptSvc := service.NewScriptService(cfg.LLMAPIKey, cfg.LLMBaseURL)
 	videoSvc := service.NewVideoService(asynqClient)
 
+	asrClient := service.NewASRClient(cfg.ASRAppID, cfg.ASRToken)
+
 	scriptHandler := handler.NewScriptHandler(scriptSvc, scriptRepo)
-	asrHandler := handler.NewASRHandler(scriptRepo)
-	videoHandler := handler.NewVideoHandler(videoRepo, videoSvc, nil)
+	asrHandler := handler.NewASRHandler(asrClient)
+	videoHandler := handler.NewVideoHandler(videoRepo, videoSvc, "uploads")
 	templateHandler := handler.NewTemplateHandler(templateRepo)
 
 	ffmpegWorker := worker.NewFFmpegWorker(videoRepo, nil)
@@ -46,12 +48,29 @@ func main() {
 
 	h := server.Default(server.WithHostPorts(":" + cfg.Port))
 
+	// CORS middleware
+	h.Use(func(ctx context.Context, c *app.RequestContext) {
+		c.Header("Access-Control-Allow-Origin", "*")
+		c.Header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
+		c.Header("Access-Control-Allow-Headers", "Content-Type, Authorization")
+		if string(c.Method()) == "OPTIONS" {
+			c.Status(204)
+			return
+		}
+		c.Next(ctx)
+	})
+
 	h.GET("/health", func(ctx context.Context, c *app.RequestContext) {
 		c.JSON(consts.StatusOK, utils.H{"status": "ok"})
 	})
 
+	// Serve uploaded audio files
+	h.StaticFS("/uploads", &app.FS{Root: "./uploads/"})
+
 	api := h.Group("/api")
 	api.POST("/script/generate", scriptHandler.Generate)
+	api.POST("/script/draft", scriptHandler.SaveDraft)
+	api.GET("/script/:id", scriptHandler.GetByID)
 	api.GET("/asr/stream", asrHandler.Stream)
 	api.POST("/video/submit", videoHandler.Submit)
 	api.GET("/video/:id/status", videoHandler.Status)

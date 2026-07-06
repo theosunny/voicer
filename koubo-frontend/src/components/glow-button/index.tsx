@@ -7,7 +7,7 @@ interface GlowButtonProps {
   onClick?: () => void
   loading?: boolean
   disabled?: boolean
-  variant?: 'primary' | 'danger'
+  variant?: 'primary' | 'cyan' | 'danger' | 'outline' | 'ghost'
   size?: 'sm' | 'md' | 'lg'
   fullWidth?: boolean
 }
