@@ -1,0 +1,46 @@
+@import './tokens.scss';
+
+@mixin hud-card($color: var(--color-primary), $size: 12px, $thickness: 1.5px) {
+  position: relative;
+  background: var(--bg-surface);
+  border-radius: var(--radius-md);
+
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0;
+    width: $size; height: $size;
+    border-top: $thickness solid $color;
+    border-left: $thickness solid $color;
+    border-radius: var(--radius-sm) 0 0 0;
+    pointer-events: none;
+  }
+
+  &::after {
+    content: '';
+    position: absolute;
+    bottom: 0; right: 0;
+    width: $size; height: $size;
+    border-bottom: $thickness solid $color;
+    border-right: $thickness solid $color;
+    border-radius: 0 0 var(--radius-sm) 0;
+    pointer-events: none;
+  }
+}
+
+@mixin glow-box($color-rgba: rgba(108, 99, 255, 0.4), $spread: 16px) {
+  box-shadow: 0 0 $spread $color-rgba, 0 0 #{$spread * 2} $color-rgba;
+}
+
+@mixin truncate($lines: 1) {
+  @if $lines == 1 {
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  } @else {
+    display: -webkit-box;
+    -webkit-line-clamp: $lines;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+}

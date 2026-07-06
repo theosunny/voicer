@@ -1,0 +1,48 @@
+@import '../../styles/tokens.scss';
+
+.profile-page {
+  min-height: 100vh;
+  padding-bottom: calc(80px + env(safe-area-inset-bottom));
+
+  &__header {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: var(--space-10) var(--space-4) var(--space-6);
+    gap: var(--space-2);
+  }
+
+  &__name { font-family: var(--font-display); font-size: var(--text-xl); font-weight: 700; color: var(--color-text-1); }
+  &__id { font-size: var(--text-sm); color: var(--color-text-3); font-family: var(--font-mono); }
+
+  &__coming-soon {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-3);
+    padding: var(--space-8) var(--space-6);
+    color: var(--color-text-3);
+  }
+
+  &__cs-icon { font-size: 48px; }
+  &__cs-title { font-size: var(--text-lg); font-weight: 600; color: var(--color-text-2); }
+  &__cs-desc { font-size: var(--text-sm); text-align: center; line-height: 1.6; }
+}
+
+.profile-avatar {
+  width: 72px; height: 72px;
+  border-radius: 50%;
+  background: var(--color-primary-dim);
+  border: 2px solid var(--color-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: var(--glow-primary);
+
+  &__letter {
+    font-family: var(--font-display);
+    font-size: var(--text-2xl);
+    font-weight: 700;
+    color: var(--color-primary);
+  }
+}
