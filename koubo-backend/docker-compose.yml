@@ -1,0 +1,76 @@
+version: "3.9"
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: koubo
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./db/migrations/001_init.sql:/docker-entrypoint-initdb.d/001_init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  api:
+    build: .
+    ports:
+      - "8080:8080"
+    environment:
+      PORT: "8080"
+      DATABASE_URL: "postgres://postgres:postgres@postgres:5432/koubo?sslmode=disable"
+      REDIS_URL: "redis:6379"
+      LLM_API_KEY: "${LLM_API_KEY:-placeholder}"
+      LLM_BASE_URL: "${LLM_BASE_URL:-https://ark.cn-beijing.volces.com/api/v3}"
+      ASR_APP_ID: "${ASR_APP_ID:-}"
+      ASR_TOKEN: "${ASR_TOKEN:-}"
+      OSS_BUCKET: "${OSS_BUCKET:-}"
+      OSS_REGION: "${OSS_REGION:-cn-hangzhou}"
+      OSS_KEY_ID: "${OSS_KEY_ID:-}"
+      OSS_KEY_SECRET: "${OSS_KEY_SECRET:-}"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
+  worker:
+    build: .
+    environment:
+      PORT: "8081"
+      DATABASE_URL: "postgres://postgres:postgres@postgres:5432/koubo?sslmode=disable"
+      REDIS_URL: "redis:6379"
+      LLM_API_KEY: "${LLM_API_KEY:-placeholder}"
+      LLM_BASE_URL: "${LLM_BASE_URL:-https://ark.cn-beijing.volces.com/api/v3}"
+      ASR_APP_ID: "${ASR_APP_ID:-}"
+      ASR_TOKEN: "${ASR_TOKEN:-}"
+      OSS_BUCKET: "${OSS_BUCKET:-}"
+      OSS_REGION: "${OSS_REGION:-cn-hangzhou}"
+      OSS_KEY_ID: "${OSS_KEY_ID:-}"
+      OSS_KEY_SECRET: "${OSS_KEY_SECRET:-}"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  pgdata:
