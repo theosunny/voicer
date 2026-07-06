@@ -46,6 +46,9 @@ yarn-error.log*
 .claude/
 .codebuddy/
 
+# Git worktrees
+.worktrees/
+
 # Misc
 *.jpeg
 *.jpg
