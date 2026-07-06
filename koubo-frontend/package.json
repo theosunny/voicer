@@ -8,7 +8,9 @@
     "dev:tt": "taro build --type tt --watch",
     "build:weapp": "taro build --type weapp",
     "build:tt": "taro build --type tt",
-    "type-check": "tsc --noEmit"
+    "type-check": "tsc --noEmit",
+    "dev:h5": "taro build --type h5 --watch",
+    "build:h5": "taro build --type h5"
   },
   "dependencies": {
     "@tarojs/components": "4.2.0",
