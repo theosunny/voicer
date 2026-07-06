@@ -1,0 +1,63 @@
+@import '../../styles/tokens.scss';
+
+.step-progress {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+
+  &__item {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    position: relative;
+
+    &--done    { color: var(--color-success); }
+    &--active  { color: var(--color-cyan); }
+    &--pending { color: var(--color-text-3); }
+    &--error   { color: var(--color-error); }
+  }
+
+  &__icon {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: var(--text-sm);
+    font-weight: 700;
+    flex-shrink: 0;
+    border: 1.5px solid currentColor;
+
+    .step-progress__item--done &   { background: var(--color-success-dim); }
+    .step-progress__item--active & { background: var(--color-cyan-dim); }
+    .step-progress__item--error &  { background: var(--color-error-dim); }
+  }
+
+  &__label {
+    font-size: var(--text-sm);
+    font-family: var(--font-body);
+  }
+
+  &__line {
+    position: absolute;
+    left: 11px;
+    top: 24px;
+    width: 1.5px;
+    height: var(--space-3);
+    background: var(--border-default);
+  }
+
+  .icon-spinner {
+    width: 12px;
+    height: 12px;
+    border: 2px solid rgba(0, 229, 255, 0.3);
+    border-top-color: var(--color-cyan);
+    border-radius: 50%;
+    animation: step-spin 0.7s linear infinite;
+  }
+
+  @keyframes step-spin {
+    to { transform: rotate(360deg); }
+  }
+}

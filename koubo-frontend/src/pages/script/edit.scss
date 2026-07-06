@@ -1,0 +1,70 @@
+@import '../../styles/tokens.scss';
+
+.edit-page {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+
+  &__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: var(--space-5) var(--space-4) var(--space-3);
+    border-bottom: 1px solid var(--border-subtle);
+  }
+
+  &__back { font-size: var(--text-xl); color: var(--color-text-2); cursor: pointer; padding: var(--space-1) var(--space-2); }
+  &__title { font-family: var(--font-display); font-size: var(--text-lg); font-weight: 600; color: var(--color-text-1); }
+  &__regen { font-size: var(--text-sm); color: var(--color-primary); cursor: pointer; padding: var(--space-1) var(--space-2); &:active { opacity: 0.6; } }
+
+  &__stats {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    padding: var(--space-2) var(--space-4);
+    background: var(--bg-surface);
+    border-bottom: 1px solid var(--border-subtle);
+  }
+
+  &__stat { display: flex; align-items: baseline; gap: 3px; }
+  &__stat-value { font-family: var(--font-mono); font-size: var(--text-md); font-weight: 600; color: var(--color-cyan); }
+  &__stat-label { font-size: var(--text-xs); color: var(--color-text-3); }
+  &__stat-sep { color: var(--color-text-3); font-size: var(--text-base); }
+  .stat-duration { font-size: var(--text-sm); }
+
+  &__editor-wrap { flex: 1; padding: var(--space-4); overflow: auto; }
+
+  &__editor {
+    width: 100%;
+    min-height: 50vh;
+    font-size: 18px;
+    line-height: 1.8;
+    color: var(--color-text-1);
+    font-family: var(--font-body);
+    background: transparent;
+    border: none;
+    outline: none;
+    &::placeholder { color: var(--color-text-3); }
+  }
+
+  &__bottom {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    padding: var(--space-3) var(--space-4);
+    background: var(--bg-surface);
+    border-top: 1px solid var(--border-subtle);
+  }
+
+  &__save-btn {
+    font-size: var(--text-base);
+    color: var(--color-text-2);
+    padding: var(--space-3) var(--space-4);
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all var(--duration-fast);
+    &:active { color: var(--color-success); border-color: var(--color-success); }
+  }
+}

@@ -1,0 +1,62 @@
+@import '../../styles/tokens.scss';
+
+.glow-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-md);
+  font-family: var(--font-display);
+  font-weight: 600;
+  cursor: pointer;
+  user-select: none;
+  transition: all var(--duration-fast) var(--ease-out);
+  position: relative;
+  overflow: hidden;
+
+  &--sm { padding: var(--space-1) var(--space-3); font-size: var(--text-sm); }
+  &--md { padding: var(--space-3) var(--space-6); font-size: var(--text-base); }
+  &--lg { padding: var(--space-4) var(--space-8); font-size: var(--text-md); }
+
+  &--full { width: 100%; }
+
+  &--primary {
+    background: var(--color-primary);
+    color: #fff;
+    box-shadow: 0 0 12px rgba(108, 99, 255, 0.4), 0 0 24px rgba(108, 99, 255, 0.15);
+
+    &:active:not(.glow-btn--inert) {
+      box-shadow: 0 0 20px rgba(108, 99, 255, 0.7), 0 0 40px rgba(108, 99, 255, 0.35);
+      transform: scale(0.98);
+    }
+  }
+
+  &--danger {
+    background: var(--color-hot);
+    color: #fff;
+    box-shadow: 0 0 12px rgba(255, 45, 120, 0.4), 0 0 24px rgba(255, 45, 120, 0.15);
+
+    &:active:not(.glow-btn--inert) {
+      box-shadow: 0 0 20px rgba(255, 45, 120, 0.7), 0 0 40px rgba(255, 45, 120, 0.35);
+      transform: scale(0.98);
+    }
+  }
+
+  &--inert {
+    opacity: 0.5;
+    cursor: not-allowed;
+    box-shadow: none;
+  }
+
+  &__spinner {
+    width: 16px;
+    height: 16px;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    border-top-color: #fff;
+    border-radius: 50%;
+    animation: glow-spin 0.7s linear infinite;
+  }
+
+  @keyframes glow-spin {
+    to { transform: rotate(360deg); }
+  }
+}
