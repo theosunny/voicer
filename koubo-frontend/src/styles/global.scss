@@ -1,41 +1,49 @@
 @import './tokens.scss';
-@import './typography.scss';
 
-page, .taro-page, view, text, image, scroll-view, input, textarea, button, navigator {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
+page, .taro-page, view, text, image, scroll-view, input, textarea, button {
+  box-sizing: border-box; margin: 0; padding: 0;
 }
 
 page, .taro-page {
-  background-color: var(--bg-base);
+  background: var(--bg-base);
   color: var(--color-text-1);
   font-family: var(--font-body);
   font-size: var(--text-base);
-  line-height: 1.6;
+  line-height: 1.5;
   min-height: 100vh;
   -webkit-font-smoothing: antialiased;
 }
 
-.page-root {
-  position: relative;
-  min-height: 100vh;
-}
+.page-root { min-height: 100vh; }
 
-/* Shared utility classes */
 .safe-area-bottom {
   padding-bottom: constant(safe-area-inset-bottom);
   padding-bottom: env(safe-area-inset-bottom);
 }
 
-.flex            { display: flex; }
-.flex-col        { flex-direction: column; }
-.items-center    { align-items: center; }
-.justify-between { justify-content: space-between; }
-.justify-center  { justify-content: center; }
-.flex-1          { flex: 1; }
-.w-full          { width: 100%; }
-.h-full          { height: 100%; }
-.text-center     { text-align: center; }
-.relative        { position: relative; }
-.absolute        { position: absolute; }
+/* ── Shared nav header (Apple-style) ── */
+.nav-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 12px var(--space-4);
+  background: var(--bg-base);
+  border-bottom: 0.5px solid var(--border-separator);
+  position: sticky; top: 0; z-index: var(--z-header);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+}
+.nav-back {
+  width: 36px; height: 36px; display: flex; align-items: center; justify-content: center;
+  font-size: 20px; color: var(--color-primary); font-weight: 400;
+  border-radius: 50%;
+  &:active { background: var(--color-primary-dim); }
+}
+.nav-title {
+  font-family: var(--font-display); font-size: var(--text-md); font-weight: 600;
+  color: var(--color-text-1); letter-spacing: -0.2px;
+}
+.nav-action {
+  font-size: var(--text-base); color: var(--color-primary); font-weight: 500;
+  padding: var(--space-2) var(--space-3);
+  &:active { opacity: 0.5; }
+}
+.nav-spacer { width: 36px; }

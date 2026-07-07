@@ -18,85 +18,74 @@ export default function IndexPage() {
   const [hasMore, setHasMore] = useState(true)
   const [loading, setLoading] = useState(false)
 
-  async function loadTemplates(nextPage: number, nextDomain: string, replace = false) {
+  async function loadTemplates(p: number, d: string, replace = false) {
     if (loading) return
     setLoading(true)
     try {
-      const res = await getTrendingTemplates({
-        domain: nextDomain === '全部' ? '' : nextDomain,
-        limit: 10,
-        page: nextPage,
-      })
+      const res = await getTrendingTemplates({ domain: d === '全部' ? '' : d, limit: 10, page: p })
       const list = res.data ?? []
       setTemplates((prev) => replace ? list : [...prev, ...list])
       setHasMore(list.length === 10)
-      setPage(nextPage)
-    } finally {
-      setLoading(false)
-    }
+      setPage(p)
+    } finally { setLoading(false) }
   }
 
   useLoad(() => { loadTemplates(1, domain, true) })
 
-  function handleDomainChange(d: string) {
-    setDomain(d)
-    loadTemplates(1, d, true)
-  }
-
-  useReachBottom(() => {
-    if (hasMore && !loading) loadTemplates(page + 1, domain)
-  })
+  function handleDomain(d: string) { setDomain(d); loadTemplates(1, d, true) }
+  useReachBottom(() => { if (hasMore && !loading) loadTemplates(page + 1, domain) })
 
   return (
     <View className="page-root index-page">
       <Toast />
-      <View className="index-page__header">
+
+      <View className="index-page__hero">
         <Text className="index-page__title">口播创作</Text>
-        <View className="index-page__bell">🔔</View>
+        <Text className="index-page__sub">AI 帮你写文案，录制你的声音</Text>
       </View>
+
       <View className="index-page__cta">
         <GlowButton onClick={() => Taro.navigateTo({ url: '/pages/script/generate' })} size="lg" fullWidth>
-          ⚡ 立即创作
+          立即创作
         </GlowButton>
       </View>
+
       <ScrollView scrollX className="index-page__domains">
         {DOMAINS.map((d) => (
-          <Chip key={d} label={d} selected={domain === d} onSelect={handleDomainChange} />
+          <Chip key={d} label={d} selected={domain === d} onSelect={handleDomain} />
         ))}
       </ScrollView>
+
       <View className="index-page__list">
         {templates.length === 0 && !loading && (
           <View className="index-page__empty">
             <Text className="index-page__empty-icon">🎬</Text>
             <Text className="index-page__empty-text">暂无模板，去自由创作吧</Text>
-            <GlowButton onClick={() => Taro.navigateTo({ url: '/pages/script/generate' })} size="sm">
-              开始创作
-            </GlowButton>
+            <GlowButton onClick={() => Taro.navigateTo({ url: '/pages/script/generate' })} size="sm">开始创作</GlowButton>
           </View>
         )}
+
         {templates.map((tpl) => (
-          <HudCard key={tpl.id} className="template-card">
-            <View className="template-card__head">
-              <Text className="template-card__title">{tpl.title}</Text>
-              <View className="template-card__badges">
-                {tpl.is_featured && <View className="template-card__badge template-card__badge--featured">精选</View>}
-                <View className="template-card__domain">{tpl.domain}</View>
+          <HudCard key={tpl.id} className="tpl-card">
+            <View className="tpl-card__head">
+              <Text className="tpl-card__title">{tpl.title}</Text>
+              <View className="tpl-card__badges">
+                {tpl.is_featured && <View className="tpl-card__badge tpl-card__badge--hot">精选</View>}
+                <View className="tpl-card__domain">{tpl.domain}</View>
               </View>
             </View>
-            <Text className="template-card__preview">{tpl.content_structure}</Text>
-            <View className="template-card__footer">
-              <Text className="template-card__usage">{tpl.usage_count.toLocaleString()} 人用过</Text>
-              <View
-                className="template-card__use-btn"
-                onClick={() => Taro.navigateTo({ url: `/pages/script/generate?template_id=${tpl.id}&domain=${tpl.domain}` })}
-              >
+            <Text className="tpl-card__preview">{tpl.content_structure}</Text>
+            <View className="tpl-card__foot">
+              <Text className="tpl-card__count">{tpl.usage_count.toLocaleString()} 人用过</Text>
+              <View className="tpl-card__use" onClick={() => Taro.navigateTo({ url: `/pages/script/generate?template_id=${tpl.id}&domain=${tpl.domain}` })}>
                 用这个模板 →
               </View>
             </View>
           </HudCard>
         ))}
-        {loading && <View className="index-page__loading"><Text>加载中...</Text></View>}
-        {!hasMore && templates.length > 0 && <View className="index-page__end"><Text>— 已经到底了 —</Text></View>}
+
+        {loading && <View className="index-page__loading">加载中...</View>}
+        {!hasMore && templates.length > 0 && <View className="index-page__end">— 已经到底了 —</View>}
       </View>
     </View>
   )

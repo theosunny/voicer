@@ -29,7 +29,6 @@ type Mode = 'domain' | 'free'
 export default function GeneratePage() {
   const router = useRouter()
   const toast = useToast()
-
   const [mode, setMode] = useState<Mode>('domain')
   const [domain, setDomain] = useState('美妆')
   const [freeTopic, setFreeTopic] = useState('')
@@ -38,59 +37,47 @@ export default function GeneratePage() {
   const [duration, setDuration] = useState<GenerateScriptRequest['duration']>('60s')
   const [sseEnabled, setSseEnabled] = useState(false)
   const [requestBody, setRequestBody] = useState<GenerateScriptRequest | null>(null)
+  const [generationComplete, setGenerationComplete] = useState(false)
 
   const { fullText, done, error, scriptId } = useSSE(
-    '/api/script/generate',
-    requestBody,
-    sseEnabled && requestBody !== null,
+    '/api/script/generate', requestBody, sseEnabled && requestBody !== null,
   )
 
   useLoad(() => {
+    Taro.setNavigationBarTitle({ title: 'AI 文案' })
     const qDomain = router.params.domain
     if (qDomain && DOMAINS.includes(qDomain)) setDomain(qDomain)
   })
 
   useEffect(() => {
-    if (done && scriptId) {
-      setSseEnabled(false)
-      Taro.navigateTo({ url: `/pages/script/edit?script_id=${scriptId}` })
-    }
+    if (done && scriptId) { setSseEnabled(false); setGenerationComplete(true) }
   }, [done, scriptId])
 
   useEffect(() => {
-    if (error) {
-      setSseEnabled(false)
-      toast.error('生成失败：' + error)
-    }
+    if (error) { setSseEnabled(false); toast.error('生成失败：' + error) }
   }, [error])
 
+  function handleEdit() {
+    if (scriptId) Taro.navigateTo({ url: `/pages/script/edit?script_id=${scriptId}` })
+  }
+  function handleRecord() {
+    if (scriptId) Taro.navigateTo({ url: `/pages/record/index?script_id=${scriptId}` })
+  }
   function handleGenerate() {
     const topic = mode === 'domain' ? domain : freeTopic.trim()
     if (!topic) { toast.error('请选择领域或输入主题'); return }
-    const body: GenerateScriptRequest = {
-      topic,
-      domain: mode === 'domain' ? domain : '',
-      script_type: scriptType,
-      style,
-      duration,
-      template_id: router.params.template_id,
-    }
-    setRequestBody(body)
+    setRequestBody({ topic, domain: mode === 'domain' ? domain : '', script_type: scriptType, style, duration, template_id: router.params.template_id })
     setSseEnabled(true)
   }
 
   const isStreaming = sseEnabled && !done && !error
+  const showTerminal = sseEnabled || generationComplete
 
   return (
     <View className="page-root generate-page">
       <Toast />
-      <View className="generate-page__header">
-        <View className="generate-page__back" onClick={() => Taro.navigateBack()}>←</View>
-        <Text className="generate-page__title">AI 文案生成</Text>
-        <View className="generate-page__ph" />
-      </View>
 
-      {!isStreaming ? (
+      {!showTerminal ? (
         <ScrollView scrollY className="generate-page__form">
           <View className="generate-page__segment">
             <View className={`seg-btn ${mode === 'domain' ? 'seg-btn--active' : ''}`} onClick={() => setMode('domain')}>领域推荐</View>
@@ -105,7 +92,7 @@ export default function GeneratePage() {
               </View>
               {DOMAIN_KEYWORDS[domain] && (
                 <>
-                  <Text className="generate-page__label generate-page__label--sub">热门关键词（点击添加）</Text>
+                  <Text className="generate-page__label generate-page__label--sub">热门关键词</Text>
                   <View className="generate-page__chips">
                     {DOMAIN_KEYWORDS[domain].map((kw) => (
                       <Chip key={kw} label={kw} onSelect={(k) => setFreeTopic((prev) => prev ? prev + ' ' + k : k)} />
@@ -120,14 +107,7 @@ export default function GeneratePage() {
             <View className="generate-page__section">
               <Text className="generate-page__label">输入主题</Text>
               <View className="generate-page__textarea-wrap">
-                <Textarea
-                  className="generate-page__textarea"
-                  value={freeTopic}
-                  onInput={(e) => setFreeTopic(e.detail.value)}
-                  placeholder="输入你想创作的主题，比如：怎么护理干皮"
-                  maxlength={50}
-                  autoHeight
-                />
+                <Textarea className="generate-page__textarea" value={freeTopic} onInput={(e) => setFreeTopic(e.detail.value)} placeholder="输入你想创作的主题" maxlength={50} autoHeight />
                 <Text className="generate-page__char-count">{freeTopic.length}/50</Text>
               </View>
             </View>
@@ -151,39 +131,41 @@ export default function GeneratePage() {
             <Text className="generate-page__label">视频时长</Text>
             <View className="generate-page__duration-row">
               {DURATIONS.map((d) => (
-                <View
-                  key={d.value}
-                  className={`duration-btn ${duration === d.value ? 'duration-btn--active' : ''}`}
-                  onClick={() => setDuration(d.value)}
-                >
-                  {d.label}
-                </View>
+                <View key={d.value} className={`dur-btn ${duration === d.value ? 'dur-btn--active' : ''}`} onClick={() => setDuration(d.value)}>{d.label}</View>
               ))}
             </View>
           </View>
 
           <View className="generate-page__submit">
-            <GlowButton onClick={handleGenerate} size="lg" fullWidth>✨ 生成文案</GlowButton>
+            <GlowButton onClick={handleGenerate} size="lg" fullWidth>生成文案</GlowButton>
           </View>
         </ScrollView>
       ) : (
-        <View className="generate-page__terminal">
-          <View className="terminal-header">
-            <View className="terminal-dot terminal-dot--red" />
-            <View className="terminal-dot terminal-dot--yellow" />
-            <View className="terminal-dot terminal-dot--green" />
-            <Text className="terminal-title">AI 正在创作...</Text>
+        <View className="generate-page__stream">
+          <View className="stream-hd">
+            <View className={`stream-hd__dot${done ? ' stream-hd__dot--done' : ''}`} />
+            <Text className="stream-hd__title">{done ? '生成完成' : 'AI 创作中…'}</Text>
           </View>
-          <ScrollView scrollY className="terminal-body">
-            <Text className="terminal-text">
-              {fullText}
-              {!done && <Text className="cursor"> </Text>}
-            </Text>
+          <ScrollView scrollY className="stream-bd">
+            <View className="stream-bd__in">
+              <Text className="stream-bd__text">
+                {fullText || (isStreaming && ' ')}
+                {!done && <Text className="stream-bd__cursor"> </Text>}
+              </Text>
+            </View>
           </ScrollView>
-          <View className="terminal-footer">
-            <Text className="terminal-status">
-              {done ? '✓ 生成完成，跳转中…' : `已生成 ${fullText.length} 字`}
-            </Text>
+          <View className="stream-ft">
+            {generationComplete ? (
+              <View className="stream-ft__actions">
+                <GlowButton onClick={handleEdit} size="md" variant="outline">编辑</GlowButton>
+                <GlowButton onClick={handleRecord} size="md">去录制</GlowButton>
+              </View>
+            ) : (
+              <View className="stream-ft__status">
+                <View className="stream-ft__spin" />
+                <Text>已生成 {fullText.length} 字</Text>
+              </View>
+            )}
           </View>
         </View>
       )}

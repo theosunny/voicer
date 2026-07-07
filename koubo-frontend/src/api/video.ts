@@ -18,3 +18,19 @@ export async function submitVideo(
   }
   return apiUpload<{ video_id: string }>('/api/video/submit', filePath, formData)
 }
+
+export interface VideoListItem {
+  id: string
+  user_id: string
+  script_id?: string
+  raw_video_url: string
+  processed_video_url: string
+  status: string
+  error_msg?: string
+  created_at: string
+  completed_at?: string
+}
+
+export async function listVideos(limit = 20, offset = 0): Promise<ApiResponse<VideoListItem[]> & { total?: number }> {
+  return apiGet<VideoListItem[]>(`/api/videos?limit=${limit}&offset=${offset}`) as Promise<ApiResponse<VideoListItem[]> & { total?: number }>
+}

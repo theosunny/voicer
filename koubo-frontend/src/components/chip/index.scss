@@ -1,29 +1,19 @@
 @import '../../styles/tokens.scss';
 
+/* ── Apple pill chip ── */
 .chip {
-  display: inline-flex;
-  align-items: center;
-  padding: var(--space-1) var(--space-3);
-  border-radius: var(--radius-full);
-  font-size: var(--text-sm);
-  font-family: var(--font-body);
+  display: inline-flex; align-items: center;
+  padding: 6px 14px; border-radius: var(--radius-full);
+  font-size: var(--text-sm); font-family: var(--font-body);
   color: var(--color-text-2);
-  background: var(--bg-glass);
-  border: 1px solid var(--border-default);
+  background: rgba(0, 0, 0, 0.04);
   transition: all var(--duration-fast) var(--ease-out);
-  white-space: nowrap;
+  white-space: nowrap; font-weight: 500;
 
-  &:active:not(.chip--disabled) {
-    transform: scale(0.95);
-  }
+  &:active:not(.chip--disabled) { transform: scale(0.96); }
 
   &--selected {
-    color: var(--color-primary);
-    background: var(--color-primary-soft);
-    border-color: var(--border-active);
+    color: #fff; background: var(--color-primary);
   }
-
-  &--disabled {
-    opacity: 0.4;
-  }
+  &--disabled { opacity: 0.3; }
 }

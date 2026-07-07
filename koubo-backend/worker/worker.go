@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"log"
+	"time"
 
 	"github.com/hibiken/asynq"
 )
@@ -27,7 +28,7 @@ func NewVideoProcessTask(videoID string) (*asynq.Task, error) {
 	}
 	return asynq.NewTask(TypeVideoProcess, payload,
 		asynq.MaxRetry(2),
-		asynq.Timeout(30*60), // 30 minutes
+		asynq.Timeout(10*time.Minute),
 	), nil
 }
 

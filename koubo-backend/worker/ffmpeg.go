@@ -48,21 +48,20 @@ func (w *FFmpegWorker) processVideo(ctx context.Context, videoID string) error {
 	}
 	defer os.RemoveAll(tmpDir)
 
+	// Determine file extension from the raw filename stored in DB
+	ext := filepath.Ext(video.RawVideoURL)
+	if ext == "" {
+		ext = ".mp3"
+	}
+
 	// Get raw file — either from OSS or local disk
-	rawPath := filepath.Join(tmpDir, "raw.mp3")
+	rawPath := filepath.Join(tmpDir, "raw"+ext)
 	if w.ossClient == nil {
-		// Local file: copy from uploads/
-		localFile := filepath.Join("uploads", videoID+".mp3")
-		if _, statErr := os.Stat(localFile); statErr != nil {
-			// try .m4a
-			localFile = filepath.Join("uploads", videoID+".m4a")
-			if _, statErr := os.Stat(localFile); statErr != nil {
-				return w.fail(ctx, videoID, fmt.Sprintf("local file not found: %v", statErr))
-			}
-		}
+		// Local file: RawVideoURL is just "<id>.mp3", look in uploads/
+		localFile := filepath.Join("uploads", video.RawVideoURL)
 		src, err := os.Open(localFile)
 		if err != nil {
-			return w.fail(ctx, videoID, fmt.Sprintf("open local file: %v", err))
+			return w.fail(ctx, videoID, fmt.Sprintf("open local file %s: %v", localFile, err))
 		}
 		defer src.Close()
 		dst, err := os.Create(rawPath)
@@ -79,11 +78,8 @@ func (w *FFmpegWorker) processVideo(ctx context.Context, videoID string) error {
 		}
 	}
 
-	// For audio-only MVP: just use the raw file as output
-	// (future: cut silence, burn subtitles, etc.)
-	outPath := filepath.Join(tmpDir, "output.mp3")
-
-	// Copy raw to output (placeholder for future FFmpeg processing)
+	// For MVP: just use the raw file as output
+	outPath := filepath.Join(tmpDir, "output"+ext)
 	src, _ := os.Open(rawPath)
 	if src != nil {
 		defer src.Close()
@@ -95,13 +91,14 @@ func (w *FFmpegWorker) processVideo(ctx context.Context, videoID string) error {
 	}
 
 	// Upload to OSS or serve from local
+	processedName := videoID + ext
 	if w.ossClient != nil {
 		f, err := os.Open(outPath)
 		if err != nil {
 			return w.fail(ctx, videoID, fmt.Sprintf("open output: %v", err))
 		}
 		defer f.Close()
-		key := fmt.Sprintf("videos/processed/%s.mp3", videoID)
+		key := fmt.Sprintf("videos/processed/%s", processedName)
 		url, err := w.ossClient.Upload(ctx, key, f)
 		if err != nil {
 			return w.fail(ctx, videoID, fmt.Sprintf("upload failed: %v", err))
@@ -109,9 +106,8 @@ func (w *FFmpegWorker) processVideo(ctx context.Context, videoID string) error {
 		return w.videoRepo.UpdateStatus(ctx, videoID, "completed", url, "")
 	}
 
-	// No OSS — mark completed with local URL
-	localURL := fmt.Sprintf("/uploads/%s.mp3", videoID)
-	return w.videoRepo.UpdateStatus(ctx, videoID, "completed", localURL, "")
+	// No OSS — store just the filename, frontend builds full URL
+	return w.videoRepo.UpdateStatus(ctx, videoID, "completed", processedName, "")
 }
 
 func (w *FFmpegWorker) fail(ctx context.Context, videoID, msg string) error {

@@ -1,5 +1,3 @@
-version: "3.9"
-
 services:
   postgres:
     image: postgres:16-alpine
@@ -45,33 +43,11 @@ services:
       ASR_APP_ID: "${ASR_APP_ID:-}"
       ASR_TOKEN: "${ASR_TOKEN:-}"
       OSS_BUCKET: "${OSS_BUCKET:-}"
-      OSS_REGION: "${OSS_REGION:-cn-hangzhou}"
+      OSS_REGION: "${OSS_REGION:-}"
       OSS_KEY_ID: "${OSS_KEY_ID:-}"
       OSS_KEY_SECRET: "${OSS_KEY_SECRET:-}"
-    depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-    restart: unless-stopped
-
-  worker:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    command: ["./koubo-worker"]  # separate worker binary (if needed) or re-use api binary with worker mode
-    environment:
-      PORT: "8081"
-      DATABASE_URL: "postgres://postgres:${DB_PASSWORD:-postgres}@postgres:5432/koubo?sslmode=disable"
-      REDIS_URL: "redis:6379"
-      LLM_API_KEY: "${LLM_API_KEY}"
-      LLM_BASE_URL: "${LLM_BASE_URL:-https://api.deepseek.com}"
-      ASR_APP_ID: "${ASR_APP_ID:-}"
-      ASR_TOKEN: "${ASR_TOKEN:-}"
-      OSS_BUCKET: "${OSS_BUCKET:-}"
-      OSS_REGION: "${OSS_REGION:-cn-hangzhou}"
-      OSS_KEY_ID: "${OSS_KEY_ID:-}"
-      OSS_KEY_SECRET: "${OSS_KEY_SECRET:-}"
+    volumes:
+      - uploads_data:/app/uploads
     depends_on:
       postgres:
         condition: service_healthy
@@ -81,3 +57,4 @@ services:
 
 volumes:
   pgdata:
+  uploads_data:

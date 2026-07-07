@@ -1,52 +1,20 @@
 @import '../../styles/tokens.scss';
 
+/* ── Apple-style toast ── */
 .toast {
-  position: fixed;
-  top: 60px;
-  left: 50%;
-  transform: translateX(-50%);
+  position: fixed; top: 12px; left: 50%; transform: translateX(-50%);
   z-index: var(--z-toast);
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  padding: var(--space-3) var(--space-5);
-  border-radius: var(--radius-full);
-  font-size: var(--text-sm);
-  font-family: var(--font-body);
-  white-space: nowrap;
-  box-shadow: var(--shadow-elevated);
-  animation: toast-in var(--duration-fast) var(--ease-out);
-
-  &--success {
-    background: var(--color-success-dim);
-    border: 1px solid rgba(76, 175, 80, 0.3);
-    color: var(--color-success);
-  }
-  &--error {
-    background: var(--color-error-dim);
-    border: 1px solid rgba(224, 85, 85, 0.3);
-    color: var(--color-error);
-  }
-  &--info {
-    background: var(--color-primary-dim);
-    border: 1px solid var(--border-active);
-    color: var(--color-primary);
-  }
-
-  &__icon {
-    font-weight: 700;
-    font-size: var(--text-xs);
-    width: 16px;
-    height: 16px;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border: 1px solid currentColor;
-  }
+  display: flex; align-items: center; gap: 8px;
+  padding: 10px 20px; border-radius: var(--radius-full);
+  font-size: var(--text-sm); font-weight: 500;
+  background: rgba(0, 0, 0, 0.82); color: #fff;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  animation: toast-in .3s var(--ease-out);
+  box-shadow: var(--shadow-lg);
 
   @keyframes toast-in {
-    from { opacity: 0; transform: translateX(-50%) translateY(-8px); }
-    to   { opacity: 1; transform: translateX(-50%) translateY(0); }
+    from { opacity: 0; transform: translateX(-50%) translateY(-12px); }
+    to { opacity: 1; transform: translateX(-50%) translateY(0); }
   }
 }

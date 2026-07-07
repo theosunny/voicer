@@ -3,13 +3,13 @@ package handler
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"io"
 	"koubo-backend/model"
 	"koubo-backend/repo"
 	"koubo-backend/service"
 	"os"
 	"path/filepath"
+	"strconv"
 
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/cloudwego/hertz/pkg/protocol/consts"
@@ -62,7 +62,10 @@ func (h *VideoHandler) Submit(ctx context.Context, c *app.RequestContext) {
 
 	// Detect file extension from content type or use .mp3 default
 	ext := ".mp3"
-	if ct := fileHeader.Header.Get("Content-Type"); ct == "audio/mp4" || ct == "video/mp4" {
+	switch ct := fileHeader.Header.Get("Content-Type"); ct {
+	case "video/mp4":
+		ext = ".mp4"
+	case "audio/mp4":
 		ext = ".m4a"
 	}
 
@@ -89,8 +92,9 @@ func (h *VideoHandler) Submit(ctx context.Context, c *app.RequestContext) {
 		v.ID = "mock-video-id"
 	}
 
-	// Save uploaded file to local disk
-	localPath := filepath.Join(h.uploadDir, v.ID+ext)
+	// Save raw file; store just the filename (no path prefix)
+	fileName := v.ID + ext
+	localPath := filepath.Join(h.uploadDir, fileName)
 	dst, err := os.Create(localPath)
 	if err != nil {
 		c.JSON(consts.StatusInternalServerError, map[string]any{"success": false, "error": "cannot save file"})
@@ -103,12 +107,10 @@ func (h *VideoHandler) Submit(ctx context.Context, c *app.RequestContext) {
 		return
 	}
 
-	// Store local path as raw URL (can be served via static file handler)
-	rawURL := fmt.Sprintf("/uploads/%s%s", v.ID, ext)
+	// Store just the filename — worker & status page build the full path
+	v.RawVideoURL = fileName
 	if h.videoRepo != nil {
-		// Update the record with the raw URL — use direct DB update
-		h.videoRepo.UpdateStatus(ctx, v.ID, "processing", rawURL, "")
-		v.RawVideoURL = rawURL
+		h.videoRepo.UpdateRawURL(ctx, v.ID, fileName)
 	}
 
 	// Enqueue processing task (will just mark as completed for audio-only MVP)
@@ -117,7 +119,7 @@ func (h *VideoHandler) Submit(ctx context.Context, c *app.RequestContext) {
 	} else {
 		// No queue — mark completed immediately
 		if h.videoRepo != nil {
-			_ = h.videoRepo.UpdateStatus(ctx, v.ID, "completed", rawURL, "")
+			_ = h.videoRepo.UpdateStatus(ctx, v.ID, "completed", fileName, "")
 		}
 	}
 
@@ -150,4 +152,34 @@ func (h *VideoHandler) Status(ctx context.Context, c *app.RequestContext) {
 			ErrorMsg:          v.ErrorMsg,
 		},
 	})
+}
+
+// List handles GET /api/videos
+func (h *VideoHandler) List(ctx context.Context, c *app.RequestContext) {
+	userID := string(c.FormValue("user_id"))
+	if userID == "" {
+		userID = "00000000-0000-0000-0000-000000000000"
+	}
+	limit := 20
+	if v := c.FormValue("limit"); string(v) != "" {
+		if n, err := strconv.Atoi(string(v)); err == nil && n > 0 && n <= 50 {
+			limit = n
+		}
+	}
+	offset := 0
+	if v := c.FormValue("offset"); string(v) != "" {
+		if n, err := strconv.Atoi(string(v)); err == nil && n >= 0 {
+			offset = n
+		}
+	}
+	if h.videoRepo == nil {
+		c.JSON(consts.StatusOK, map[string]any{"success": true, "data": []model.Video{}, "total": 0})
+		return
+	}
+	videos, total, err := h.videoRepo.ListByUser(ctx, userID, limit, offset)
+	if err != nil {
+		c.JSON(consts.StatusInternalServerError, map[string]any{"success": false, "error": err.Error()})
+		return
+	}
+	c.JSON(consts.StatusOK, map[string]any{"success": true, "data": videos, "total": total})
 }

@@ -15,7 +15,6 @@ out/
 .env
 .env.local
 .env.*.local
-*.env
 
 # Go
 vendor/
@@ -30,6 +29,7 @@ koubo-server
 
 # Runtime data
 koubo-backend/uploads/
+dump.rdb
 
 # OS
 .DS_Store

@@ -1,91 +1,41 @@
 @import '../../styles/tokens.scss';
 
-.glow-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: var(--radius-md);
-  font-family: var(--font-display);
-  font-weight: 600;
-  letter-spacing: -0.2px;
+/* ── Apple-style button ── */
+.btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  border-radius: var(--radius-md); font-family: var(--font-display);
+  font-weight: 590; letter-spacing: -0.2px;
   transition: all var(--duration-fast) var(--ease-out);
   position: relative;
-  overflow: hidden;
 
-  &--sm { padding: var(--space-1) var(--space-3); font-size: var(--text-sm); border-radius: var(--radius-sm); }
-  &--md { padding: var(--space-2) var(--space-5); font-size: var(--text-base); }
-  &--lg { padding: var(--space-3) var(--space-6); font-size: var(--text-md); }
-
+  &--sm { padding: 6px 14px; font-size: var(--text-sm); border-radius: var(--radius-sm); }
+  &--md { padding: 10px 20px; font-size: var(--text-base); }
+  &--lg { padding: 14px 24px; font-size: var(--text-md); }
   &--full { width: 100%; }
 
   &--primary {
-    background: var(--color-primary);
-    color: #fff;
-    box-shadow: var(--glow-primary);
-
-    &:active:not(.glow-btn--inert) {
-      opacity: 0.88;
-      transform: scale(0.98);
-    }
+    background: var(--color-primary); color: #fff;
+    &:active:not(.btn--inert) { opacity: 0.78; transform: scale(0.98); }
   }
-
-  &--cyan {
-    background: var(--color-cyan);
-    color: #fff;
-    box-shadow: var(--glow-cyan);
-
-    &:active:not(.glow-btn--inert) {
-      opacity: 0.88;
-      transform: scale(0.98);
-    }
-  }
-
   &--danger {
-    background: var(--color-coral);
-    color: #fff;
-    box-shadow: var(--glow-coral);
-
-    &:active:not(.glow-btn--inert) {
-      opacity: 0.88;
-      transform: scale(0.98);
-    }
+    background: var(--color-error); color: #fff;
+    &:active:not(.btn--inert) { opacity: 0.78; transform: scale(0.98); }
   }
-
   &--outline {
-    background: transparent;
-    color: var(--color-primary);
-    border: 1px solid var(--border-active);
-
-    &:active:not(.glow-btn--inert) {
-      background: var(--color-primary-dim);
-    }
+    background: transparent; color: var(--color-primary);
+    border: 1px solid var(--color-primary);
+    &:active:not(.btn--inert) { background: var(--color-primary-dim); }
   }
-
   &--ghost {
-    background: rgba(255, 255, 255, 0.5);
-    color: var(--color-text-2);
-    border: 1px solid var(--border-default);
-
-    &:active:not(.glow-btn--inert) {
-      background: rgba(255, 255, 255, 0.8);
-    }
+    background: rgba(0,0,0,0.04); color: var(--color-text-2);
+    &:active:not(.btn--inert) { background: rgba(0,0,0,0.08); }
   }
-
-  &--inert {
-    opacity: 0.4;
-    box-shadow: none;
-  }
+  &--inert { opacity: 0.35; }
 
   &__spinner {
-    width: 16px;
-    height: 16px;
-    border: 2px solid rgba(255, 255, 255, 0.3);
-    border-top-color: #fff;
-    border-radius: 50%;
-    animation: glow-spin 0.7s linear infinite;
+    width: 16px; height: 16px; border: 2px solid rgba(255,255,255,0.35);
+    border-top-color: #fff; border-radius: 50%;
+    animation: spin .6s linear infinite;
   }
-
-  @keyframes glow-spin {
-    to { transform: rotate(360deg); }
-  }
+  @keyframes spin { to { transform: rotate(360deg); } }
 }

@@ -40,7 +40,7 @@ func (h *ScriptHandler) GetByID(ctx context.Context, c *app.RequestContext) {
 }
 
 // Generate handles POST /api/script/generate
-// Returns SSE stream of chunks then a done event with script_id
+// Supports SSE streaming (default) and plain JSON response (when ?stream=0 is set).
 func (h *ScriptHandler) Generate(ctx context.Context, c *app.RequestContext) {
 	var req model.ScriptGenerateRequest
 	if err := c.BindJSON(&req); err != nil {
@@ -48,7 +48,6 @@ func (h *ScriptHandler) Generate(ctx context.Context, c *app.RequestContext) {
 		return
 	}
 
-	// Normalize duration: frontend sends "30s","60s","3min" → convert to seconds
 	if req.DurationSec <= 0 {
 		req.DurationSec = parseDuration(req.Duration)
 	}
@@ -56,16 +55,10 @@ func (h *ScriptHandler) Generate(ctx context.Context, c *app.RequestContext) {
 		req.DurationSec = 60
 	}
 
-	// Map Chinese labels to English DB codes
 	req.ScriptType = normalizeScriptType(req.ScriptType)
 	req.Style = normalizeStyle(req.Style)
 
 	prompt := h.svc.BuildPrompt(req)
-
-	c.Response.Header.Set("Content-Type", "text/event-stream")
-	c.Response.Header.Set("Cache-Control", "no-cache")
-	c.Response.Header.Set("Connection", "keep-alive")
-	c.SetStatusCode(consts.StatusOK)
 
 	chunkCh := make(chan string, 64)
 	var fullContent strings.Builder
@@ -76,13 +69,58 @@ func (h *ScriptHandler) Generate(ctx context.Context, c *app.RequestContext) {
 		close(chunkCh)
 	}()
 
+	stream := string(c.FormValue("stream")) != "0"
+
+	if stream {
+		c.Response.Header.Set("Content-Type", "text/event-stream")
+		c.Response.Header.Set("Cache-Control", "no-cache")
+		c.Response.Header.Set("Connection", "keep-alive")
+		c.SetStatusCode(consts.StatusOK)
+
+		for chunk := range chunkCh {
+			fullContent.WriteString(chunk)
+			c.Response.AppendBody([]byte(service.BuildSSEChunk(chunk)))
+		}
+
+		if err := <-errCh; err != nil {
+			c.Response.AppendBody([]byte(service.BuildSSEError(err.Error())))
+			return
+		}
+
+		content := fullContent.String()
+		dur := service.EstimateDuration(content)
+
+		userID := req.UserID
+		if userID == "" {
+			userID = "00000000-0000-0000-0000-000000000000"
+		}
+		script := &model.Script{
+			UserID:           userID,
+			Title:            req.Keywords + req.Topic,
+			Content:          content,
+			ScriptType:       req.ScriptType,
+			Style:            req.Style,
+			DurationEstimate: dur,
+		}
+
+		scriptID := ""
+		if h.scriptRepo != nil {
+			if err := h.scriptRepo.Create(ctx, script); err == nil {
+				scriptID = script.ID
+			}
+		}
+
+		c.Response.AppendBody([]byte(service.BuildSSEDone(scriptID)))
+		return
+	}
+
+	// Non-streaming mode: collect fully then return JSON (dev tools)
 	for chunk := range chunkCh {
 		fullContent.WriteString(chunk)
-		c.Response.AppendBody([]byte(service.BuildSSEChunk(chunk)))
 	}
 
 	if err := <-errCh; err != nil {
-		c.Response.AppendBody([]byte(service.BuildSSEError(err.Error())))
+		c.JSON(consts.StatusInternalServerError, map[string]any{"success": false, "error": err.Error()})
 		return
 	}
 
@@ -109,11 +147,16 @@ func (h *ScriptHandler) Generate(ctx context.Context, c *app.RequestContext) {
 		}
 	}
 
-	c.Response.AppendBody([]byte(service.BuildSSEDone(scriptID)))
+	c.JSON(consts.StatusOK, map[string]any{
+		"success": true,
+		"data": map[string]any{
+			"id":      scriptID,
+			"content": content,
+		},
+	})
 }
 
 // SaveDraft handles POST /api/script/draft
-// Creates or updates a script draft.
 func (h *ScriptHandler) SaveDraft(ctx context.Context, c *app.RequestContext) {
 	var req struct {
 		ID         string `json:"id"`
@@ -136,7 +179,6 @@ func (h *ScriptHandler) SaveDraft(ctx context.Context, c *app.RequestContext) {
 	}
 
 	if req.ID != "" {
-		// Update existing
 		s := &model.Script{
 			ID:               req.ID,
 			Title:            req.Title,
@@ -155,7 +197,6 @@ func (h *ScriptHandler) SaveDraft(ctx context.Context, c *app.RequestContext) {
 		return
 	}
 
-	// Create new
 	s := &model.Script{
 		UserID:           "00000000-0000-0000-0000-000000000000",
 		Title:            req.Title,
@@ -172,7 +213,6 @@ func (h *ScriptHandler) SaveDraft(ctx context.Context, c *app.RequestContext) {
 	c.JSON(consts.StatusOK, map[string]any{"success": true, "data": map[string]string{"id": s.ID}})
 }
 
-// parseDuration converts frontend duration strings ("30s","60s","3min") to seconds.
 func parseDuration(raw string) int {
 	switch raw {
 	case "30s":
@@ -186,7 +226,6 @@ func parseDuration(raw string) int {
 	}
 }
 
-// normalizeScriptType maps Chinese UI labels to DB enum values.
 func normalizeScriptType(t string) string {
 	switch t {
 	case "产品推广":
@@ -200,7 +239,6 @@ func normalizeScriptType(t string) string {
 	case "情感故事":
 		return "insight"
 	default:
-		// already in DB format (promo/insight/life) or unknown
 		if t == "promo" || t == "insight" || t == "life" {
 			return t
 		}
@@ -208,7 +246,6 @@ func normalizeScriptType(t string) string {
 	}
 }
 
-// normalizeStyle maps Chinese UI labels to English style codes.
 func normalizeStyle(s string) string {
 	switch s {
 	case "轻松随性":
@@ -220,7 +257,6 @@ func normalizeStyle(s string) string {
 	case "幽默风趣":
 		return "casual"
 	default:
-		// already English or unknown
 		if s == "casual" || s == "professional" || s == "emotional" {
 			return s
 		}

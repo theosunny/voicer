@@ -26,6 +26,24 @@ func (r *VideoRepo) GetByID(ctx context.Context, id string) (*model.Video, error
 	return &v, err
 }
 
+func (r *VideoRepo) ListByUser(ctx context.Context, userID string, limit, offset int) ([]model.Video, int64, error) {
+	var total int64
+	var videos []model.Video
+	q := r.db.WithContext(ctx).Model(&model.Video{}).Where("user_id = ?", userID)
+	if err := q.Count(&total).Error; err != nil {
+		return nil, 0, err
+	}
+	if err := q.Order("created_at DESC").Limit(limit).Offset(offset).Find(&videos).Error; err != nil {
+		return nil, 0, err
+	}
+	return videos, total, nil
+}
+
+func (r *VideoRepo) UpdateRawURL(ctx context.Context, id, rawURL string) error {
+	return r.db.WithContext(ctx).Model(&model.Video{}).Where("id = ?", id).
+		Update("raw_video_url", rawURL).Error
+}
+
 func (r *VideoRepo) UpdateStatus(ctx context.Context, id, status, processedURL, errMsg string) error {
 	updates := map[string]any{
 		"status":    status,

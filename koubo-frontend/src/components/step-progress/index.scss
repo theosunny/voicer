@@ -42,7 +42,7 @@
   .icon-spinner {
     width: 12px;
     height: 12px;
-    border: 2px solid rgba(91, 106, 191, 0.2);
+    border: 2px solid var(--color-primary-dim);
     border-top-color: var(--color-primary);
     border-radius: 50%;
     animation: step-spin 0.7s linear infinite;

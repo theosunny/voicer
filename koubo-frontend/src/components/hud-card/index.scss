@@ -1,19 +1,9 @@
 @import '../../styles/tokens.scss';
 
-.hud-card {
-  position: relative;
+/* ── Apple-style card ── */
+.card {
   background: var(--bg-surface);
   border-radius: var(--radius-lg);
-  border: 1px solid var(--border-glass);
-  box-shadow: var(--shadow-soft);
   padding: var(--space-4);
-
-  &--primary { border-color: rgba(91, 106, 191, 0.15); }
-  &--cyan    { border-color: rgba(58, 161, 200, 0.15); }
-  &--hot     { border-color: rgba(232, 129, 107, 0.15); }
-
-  &__content {
-    position: relative;
-    z-index: 1;
-  }
+  box-shadow: var(--shadow-sm);
 }

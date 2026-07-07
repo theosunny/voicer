@@ -64,8 +64,12 @@ func main() {
 		c.JSON(consts.StatusOK, utils.H{"status": "ok"})
 	})
 
-	// Serve uploaded audio files
-	h.StaticFS("/uploads", &app.FS{Root: "./uploads/"})
+	// Serve uploaded files — manual handler (StaticFS path resolution is unreliable)
+	h.GET("/uploads/*filepath", func(ctx context.Context, c *app.RequestContext) {
+		fp := c.Param("filepath")
+		filePath := "./uploads/" + fp
+		c.File(filePath)
+	})
 
 	api := h.Group("/api")
 	api.POST("/script/generate", scriptHandler.Generate)
@@ -74,6 +78,7 @@ func main() {
 	api.GET("/asr/stream", asrHandler.Stream)
 	api.POST("/video/submit", videoHandler.Submit)
 	api.GET("/video/:id/status", videoHandler.Status)
+	api.GET("/videos", videoHandler.List)
 	api.GET("/templates/trending", templateHandler.List)
 
 	h.Spin()
