@@ -25,31 +25,35 @@ voicer/
         └── styles/           # tokens.scss, global.scss
 ```
 
-## 启动方式（当前 WSL2 环境）
+## 启动方式
 
-见 `docs/startup.md` 完整文档。核心命令：
+### 首选：Docker Compose（需要 Docker Desktop 运行中）
 
 ```bash
-# 环境变量
+cd koubo-backend
+cp .env.example .env   # 编辑填入 LLM_API_KEY
+docker compose up -d   # PostgreSQL + Redis + API 一键启动
+curl http://localhost:8080/health
+```
+
+Windows Docker Desktop 需在设置中为当前 WSL distro 开启集成。
+
+### 备选：本地手动启动
+
+见 `docs/startup.md`。核心命令：
+
+```bash
 export LD_LIBRARY_PATH=$HOME/local/lib:$LD_LIBRARY_PATH
 export PATH=$HOME/local/bin:$HOME/go/bin:$PATH
 
-# 启动 PostgreSQL (端口 5433, 数据目录 ~/pgdata)
-pg_ctl -D ~/pgdata -l ~/pgdata/logfile start
-
-# 启动 Redis (端口 6379)
-redis-server --daemonize yes --port 6379 --logfile /tmp/redis.log
-
-# 启动后端 (端口 8080)
-cd koubo-backend
-set -a && source .env && set +a
-nohup ./koubo-server &>/tmp/koubo-server.log &
-
-# 编译前端
-cd koubo-frontend && npm run build:weapp
+pg_ctl -D ~/pgdata -l ~/pgdata/logfile start          # PostgreSQL :5433
+redis-server --daemonize yes --port 6379               # Redis :6379
+cd koubo-backend && set -a && source .env && set +a
+nohup ./koubo-server &>/tmp/koubo-server.log &         # API :8080
+cd ../koubo-frontend && npm run build:weapp            # 前端
 ```
 
-**注意**：Go 编译器在 `~/go/bin/go`，不是系统 PATH。后端二进制 `koubo-server` 已预编译，改动代码后需重新 `go build`。
+**注意**：Go 编译器在 `~/go/bin/go`，后端二进制需 `go build` 后更新。
 
 ## 环境变量 (.env)
 
@@ -76,6 +80,6 @@ cd koubo-frontend && npm run build:weapp
 ## 已知限制
 
 - 微信开发者工具不支持摄像头（真机才有视频）
-- 开发者工具不支持 `enableChunked`（生成页走 JSON fallback）
-- WebSocket ASR 语音追踪仅在真机可用
-- 无 Docker Desktop（WSL2 可直接运行，但未安装 Docker）
+- 开发者工具不支持 `enableChunked`（生成页走 `?stream=0` JSON fallback）
+- WebSocket ASR 仅在真机可用
+- Docker Desktop 需手动开启 WSL 集成

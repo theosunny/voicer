@@ -48,6 +48,10 @@ CREATE TABLE templates (
   created_at        TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- Dev test user (foreign key required by API)
+INSERT INTO users (id, openid, platform, nickname)
+  VALUES ('00000000-0000-0000-0000-000000000000', 'dev', 'wechat', '开发者');
+
 INSERT INTO templates (title, domain, content_structure, is_featured) VALUES
   ('产品种草三段式', 'product', '开场钩子（提问痛点）+ 产品介绍（三大卖点）+ 行动号召（限时优惠）', true),
   ('情感共鸣分享', 'lifestyle', '引入场景（生活细节）+ 感悟展开（转折升华）+ 结尾共鸣（邀请互动）', true),
