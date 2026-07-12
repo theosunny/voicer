@@ -154,6 +154,25 @@ func (h *VideoHandler) Status(ctx context.Context, c *app.RequestContext) {
 	})
 }
 
+// Delete handles DELETE /api/video/:id
+func (h *VideoHandler) Delete(ctx context.Context, c *app.RequestContext) {
+	id := c.Param("id")
+	if h.videoRepo == nil {
+		c.JSON(consts.StatusOK, map[string]any{"success": true})
+		return
+	}
+	rawURL, err := h.videoRepo.Delete(ctx, id)
+	if err != nil {
+		c.JSON(consts.StatusNotFound, map[string]any{"success": false, "error": "not found"})
+		return
+	}
+	// Best-effort: delete local file
+	if rawURL != "" {
+		_ = os.Remove(filepath.Join(h.uploadDir, rawURL))
+	}
+	c.JSON(consts.StatusOK, map[string]any{"success": true})
+}
+
 // List handles GET /api/videos
 func (h *VideoHandler) List(ctx context.Context, c *app.RequestContext) {
 	userID := string(c.FormValue("user_id"))

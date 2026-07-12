@@ -12,3 +12,7 @@ export async function saveDraft(data: SaveDraftRequest & { id?: string }): Promi
 export async function updateDraft(id: string, data: SaveDraftRequest): Promise<ApiResponse<Script>> {
   return apiPost<Script>('/api/script/draft', { ...data, id })
 }
+
+export async function listScripts(limit = 20, offset = 0): Promise<{ success: boolean; data: Script[] }> {
+  return apiGet(`/api/scripts?limit=${limit}&offset=${offset}`)
+}

@@ -18,14 +18,17 @@ type Script struct {
 func (Script) TableName() string { return "scripts" }
 
 type ScriptGenerateRequest struct {
-	Mode        string `json:"mode"`        // "domain" | "free"
-	Domain      string `json:"domain"`      // used when mode=domain
-	Keywords    string `json:"keywords"`
-	Topic       string `json:"topic"`       // used when mode=free
-	Style       string `json:"style"`       // "casual" | "professional" | "emotional" or Chinese label
-	ScriptType  string `json:"script_type"` // "promo" | "insight" | "life" or Chinese label
-	Duration    string `json:"duration"`    // "30s" | "60s" | "3min" — from frontend
-	DurationSec int    `json:"duration_sec"`
-	UserID      string `json:"user_id"`
-	TemplateID  string `json:"template_id"`
+	Mode              string `json:"mode"`
+	Domain            string `json:"domain"`
+	Keywords          string `json:"keywords"`
+	Topic             string `json:"topic"`
+	Style             string `json:"style"`
+	ScriptType        string `json:"script_type"`
+	Duration          string `json:"duration"`
+	DurationSec       int    `json:"duration_sec"`
+	UserID            string `json:"user_id"`
+	TemplateID        string `json:"template_id"`
+	TemplateStructure string `json:"template_structure"`
+	Persona           string `json:"persona"`
+	PersonaType       string `json:"persona_type"` // e.g. expert/friend/humor/student
 }

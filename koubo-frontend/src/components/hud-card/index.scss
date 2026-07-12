@@ -1,9 +1,22 @@
 @import '../../styles/tokens.scss';
 
-/* ── Apple-style card ── */
 .card {
-  background: var(--bg-surface);
+  background: #fff;
   border-radius: var(--radius-lg);
   padding: var(--space-4);
-  box-shadow: var(--shadow-sm);
+  box-shadow: var(--shadow-soft);
+  transition: transform var(--duration-fast) var(--ease-out);
+
+  &--primary {
+    background: linear-gradient(135deg, rgba(254,44,85,0.06) 0%, rgba(255,96,122,0.04) 100%);
+    border: 1px solid rgba(254,44,85,0.12);
+  }
+  &--cyan {
+    background: linear-gradient(135deg, rgba(0,200,212,0.06) 0%, rgba(0,200,212,0.03) 100%);
+    border: 1px solid rgba(0,200,212,0.15);
+  }
+  &--hot {
+    background: linear-gradient(135deg, rgba(255,159,10,0.06) 0%, rgba(255,159,10,0.03) 100%);
+    border: 1px solid rgba(255,159,10,0.15);
+  }
 }

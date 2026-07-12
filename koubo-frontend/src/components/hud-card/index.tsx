@@ -9,6 +9,7 @@ interface Props {
   color?: 'primary' | 'cyan' | 'hot'
 }
 
-export default function HudCard({ children, className = '', style }: Props) {
-  return <View className={`card ${className}`} style={style}>{children}</View>
+export default function HudCard({ children, className = '', style, color }: Props) {
+  const colorClass = color ? ` card--${color}` : ''
+  return <View className={`card${colorClass} ${className}`} style={style}>{children}</View>
 }

@@ -1,41 +1,47 @@
 @import '../../styles/tokens.scss';
 
-/* ── Apple-style button ── */
 .btn {
   display: inline-flex; align-items: center; justify-content: center;
-  border-radius: var(--radius-md); font-family: var(--font-display);
-  font-weight: 590; letter-spacing: -0.2px;
-  transition: all var(--duration-fast) var(--ease-out);
-  position: relative;
+  border-radius: var(--radius-full);
+  font-family: var(--font-display);
+  font-weight: 600; letter-spacing: -0.2px;
+  transition: opacity 150ms ease, transform 150ms ease;
+  position: relative; overflow: hidden;
 
-  &--sm { padding: 6px 14px; font-size: var(--text-sm); border-radius: var(--radius-sm); }
-  &--md { padding: 10px 20px; font-size: var(--text-base); }
-  &--lg { padding: 14px 24px; font-size: var(--text-md); }
+  &--sm  { padding: 9px 22px;  font-size: var(--text-sm);  }
+  &--md  { padding: 12px 28px; font-size: var(--text-base); }
+  &--lg  { padding: 14px 32px; font-size: var(--text-md);   }
   &--full { width: 100%; }
 
   &--primary {
-    background: var(--color-primary); color: #fff;
-    &:active:not(.btn--inert) { opacity: 0.78; transform: scale(0.98); }
+    background: var(--gradient-primary);
+    color: #fff;
+    box-shadow: 0 4px 14px rgba(254, 44, 85, 0.30);
+    &:active:not(.btn--inert) { opacity: 0.80; transform: scale(0.97); }
   }
   &--danger {
-    background: var(--color-error); color: #fff;
-    &:active:not(.btn--inert) { opacity: 0.78; transform: scale(0.98); }
+    background: var(--color-error);
+    color: #fff;
+    &:active:not(.btn--inert) { opacity: 0.80; transform: scale(0.97); }
   }
   &--outline {
-    background: transparent; color: var(--color-primary);
-    border: 1px solid var(--color-primary);
-    &:active:not(.btn--inert) { background: var(--color-primary-dim); }
+    background: var(--color-primary-dim);
+    color: var(--color-primary);
+    border: 1px solid rgba(254, 44, 85, 0.20);
+    &:active:not(.btn--inert) { opacity: 0.75; }
   }
   &--ghost {
-    background: rgba(0,0,0,0.04); color: var(--color-text-2);
-    &:active:not(.btn--inert) { background: rgba(0,0,0,0.08); }
+    background: #F5F5F5;
+    color: var(--color-text-2);
+    &:active:not(.btn--inert) { opacity: 0.75; }
   }
-  &--inert { opacity: 0.35; }
+  &--inert { opacity: 0.40; }
 
   &__spinner {
-    width: 16px; height: 16px; border: 2px solid rgba(255,255,255,0.35);
+    width: 16px; height: 16px;
+    border: 2px solid rgba(255,255,255,0.40);
     border-top-color: #fff; border-radius: 50%;
-    animation: spin .6s linear infinite;
+    animation: btn-spin .6s linear infinite;
   }
-  @keyframes spin { to { transform: rotate(360deg); } }
+  @keyframes btn-spin { to { transform: rotate(360deg); } }
 }

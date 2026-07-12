@@ -26,6 +26,16 @@ func (r *ScriptRepo) GetByID(ctx context.Context, id string) (*model.Script, err
 	return &s, err
 }
 
+func (r *ScriptRepo) List(ctx context.Context, userID string, limit, offset int) ([]model.Script, error) {
+	var scripts []model.Script
+	err := r.db.WithContext(ctx).
+		Where("user_id = ?", userID).
+		Order("updated_at DESC").
+		Limit(limit).Offset(offset).
+		Find(&scripts).Error
+	return scripts, err
+}
+
 func (r *ScriptRepo) Update(ctx context.Context, s *model.Script) error {
 	return r.db.WithContext(ctx).Model(s).Updates(map[string]any{
 		"title":             s.Title,

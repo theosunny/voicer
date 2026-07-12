@@ -2,6 +2,7 @@ import { View, Text, ScrollView, Camera, Video } from '@tarojs/components'
 import Taro, { useLoad, useRouter, useUnload } from '@tarojs/taro'
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import GlowButton from '../../components/glow-button'
+import Icon from '../../components/icon'
 import Toast, { useToast } from '../../components/toast'
 import { getScript } from '../../api/script'
 import { submitVideo } from '../../api/video'
@@ -108,7 +109,7 @@ export default function RecordPage() {
       try { pcmRecorder().start({ format: 'PCM', sampleRate: 16000, numberOfChannels: 1, frameSize: 10 }) } catch {}
       cameraCtxRef.current!.startRecord({ timeoutCallback: () => cameraCtxRef.current?.stopRecord({ success: (r) => { setRecordedFile(r.tempVideoPath); finish() } }) })
     } else {
-      const rm = Taro.getRecorderManager()
+      const rm = pcmRecorder()
       rm.onStop((r) => { setRecordedFile(r.tempFilePath); finish() })
       rm.onError((e) => { console.error('Recorder error:', e) })
       rm.start({ format: 'mp3', sampleRate: 44100, numberOfChannels: 1, encodeBitRate: 128000, duration: 600000 })
@@ -177,26 +178,7 @@ export default function RecordPage() {
     <View className="page-root record-page">
       <Toast />
 
-      {/* ── Teleprompter ── */}
-      <ScrollView scrollY className="teleprompter" onTouchStart={onTouch}>
-        <View className="teleprompter-inner">
-          {paragraphs.map((p, i) => {
-            if (i >= currentPara) return null
-            return <View key={i} className="tp tp--past"><Text className="tp-text">{p}</Text></View>
-          })}
-          <View className={`tp tp--cur${isRecording ? ' tp--live' : ''}`} style={{ opacity: 1 }}>
-            <Text className="tp-text tp-text--cur">{cur}</Text>
-            {isRecording && asrOn && <Text style={{ fontSize: 11, color: 'var(--color-success)', marginTop: 4 }}>🎤 语音追踪中</Text>}
-          </View>
-          {paragraphs.map((p, i) => {
-            if (i <= currentPara) return null
-            return <View key={i} className="tp" style={{ opacity: i === currentPara + 1 ? .6 : .3 }}><Text className="tp-text">{p}</Text></View>
-          })}
-          {!paragraphs.length && <Text style={{ textAlign: 'center', color: 'var(--color-text-3)', padding: 40 }}>文案加载中…</Text>}
-        </View>
-      </ScrollView>
-
-      {/* ── Camera ── */}
+      {/* ── Camera (top) ── */}
       <View className="cam-zone">
         {cameraBlocked || cameraReady ? (
           <Camera className="cam-view" devicePosition="front" mode="normal"
@@ -204,14 +186,14 @@ export default function RecordPage() {
             onError={() => { setCameraBlocked(true); setCameraReady(false) }} />
         ) : (
           <View className="cam-fallback">
-            <Text style={{ fontSize: 32 }}>🤳</Text>
-            <Text style={{ fontSize: 13, color: '#8E8E93', marginTop: 8 }}>摄像头 · 真机扫码可用</Text>
+            <Icon name="camera" size={32} color="var(--color-text-3)" />
+            <Text style={{ fontSize: 13, color: 'var(--color-text-3)', marginTop: 8 }}>摄像头 · 真机扫码可用</Text>
           </View>
         )}
         {cameraBlocked && (
           <View className="cam-fallback" style={{ position: 'absolute', inset: 0, zIndex: 5 }}>
-            <Text style={{ fontSize: 32 }}>🤳</Text>
-            <Text style={{ fontSize: 13, color: '#8E8E93', marginTop: 8 }}>未授权 · 使用麦克风</Text>
+            <Icon name="mic" size={32} color="var(--color-text-3)" />
+            <Text style={{ fontSize: 13, color: 'var(--color-text-3)', marginTop: 8 }}>未授权 · 使用麦克风录音</Text>
           </View>
         )}
         {isRecording && (
@@ -222,6 +204,30 @@ export default function RecordPage() {
         )}
       </View>
 
+      {/* ── Teleprompter (scrollable middle) ── */}
+      <ScrollView scrollY className="teleprompter" onTouchStart={onTouch}>
+        <View className="teleprompter-inner">
+          {paragraphs.map((p, i) => {
+            if (i >= currentPara) return null
+            return <View key={i} className="tp tp--past"><Text className="tp-text">{p}</Text></View>
+          })}
+          <View className={`tp tp--cur${isRecording ? ' tp--live' : ''}`} style={{ opacity: 1 }}>
+            <Text className="tp-text tp-text--cur">{cur}</Text>
+            {isRecording && asrOn && (
+              <View style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 4 }}>
+                <Icon name="mic" size={11} color="var(--color-success)" />
+                <Text style={{ fontSize: 11, color: 'var(--color-success)' }}>语音追踪中</Text>
+              </View>
+            )}
+          </View>
+          {paragraphs.map((p, i) => {
+            if (i <= currentPara) return null
+            return <View key={i} className="tp" style={{ opacity: i === currentPara + 1 ? .5 : .25 }}><Text className="tp-text">{p}</Text></View>
+          })}
+          {!paragraphs.length && <Text style={{ textAlign: 'center', color: 'var(--color-text-3)', padding: 40 }}>文案加载中…</Text>}
+        </View>
+      </ScrollView>
+
       {/* ── Progress ── */}
       {isRecording && <View className="rec-bar"><View className="rec-bar__f" style={{ width: `${Math.round(pct * 100)}%` }} /></View>}
 
@@ -230,7 +236,7 @@ export default function RecordPage() {
         {recordState === 'idle' && (
           <View className="ctl-idle">
             <View className="rbtn rbtn--idle" onClick={startRecording}><View className="rbtn__in" /></View>
-            <Text className="ctl-hint">轻点录制 · 看着摄像头朗读文案</Text>
+            <Text className="ctl-hint">轻点开始录制 · 看着镜头朗读文案</Text>
           </View>
         )}
         {(recordState === 'recording' || recordState === 'paused') && (
@@ -272,7 +278,7 @@ export default function RecordPage() {
                 )}
                 <View className="sheet__row">
                   <View className="sheet__re" onClick={resetRecording}>重新录制</View>
-                  <GlowButton onClick={doSubmit} loading={submitting} size="md">提交</GlowButton>
+                  <GlowButton onClick={doSubmit} loading={submitting} size="md" fullWidth>提交</GlowButton>
                 </View>
               </>
             )}

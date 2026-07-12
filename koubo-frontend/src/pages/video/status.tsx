@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react'
 import HudCard from '../../components/hud-card'
 import GlowButton from '../../components/glow-button'
 import StepProgress from '../../components/step-progress'
+import Icon from '../../components/icon'
 import Toast, { useToast } from '../../components/toast'
 import { useVideoPoller } from '../../hooks/useVideoPoller'
 import { API_BASE } from '../../api/client'
@@ -47,7 +48,9 @@ export default function VideoStatusPage() {
     if (!status?.processed_video_url) return null
     const u = status.processed_video_url
     if (u.startsWith('http')) return u
-    return API_BASE + '/uploads/' + u
+    // strip any accidental uploads/ prefix before building URL
+    const name = u.replace(/^uploads\//, '')
+    return API_BASE + '/uploads/' + name
   }
 
   function play() {
@@ -70,14 +73,28 @@ export default function VideoStatusPage() {
   function handleSave() {
     const url = audioUrl()
     if (!url) { toast.error('文件不可用'); return }
+    const isVideo = url.endsWith('.mp4')
     Taro.showLoading({ title: '下载中…' })
     Taro.downloadFile({
       url,
       success: (r) => {
         Taro.hideLoading()
-        if (r.statusCode === 200) {
-          Taro.openDocument({ filePath: r.tempFilePath, showMenu: true, success: () => toast.success('已打开'), fail: () => toast.error('无法打开') })
-        } else toast.error('下载失败')
+        if (r.statusCode !== 200) { toast.error('下载失败'); return }
+        if (isVideo) {
+          // mp4 → save to photos album
+          Taro.saveVideoToPhotosAlbum({
+            filePath: r.tempFilePath,
+            success: () => toast.success('视频已保存到相册'),
+            fail: () => toast.error('保存失败，请检查相册权限'),
+          })
+        } else {
+          // mp3/m4a → save to local filesystem
+          Taro.saveFile({
+            tempFilePath: r.tempFilePath,
+            success: () => toast.success('音频已保存到本地'),
+            fail: () => toast.error('保存失败'),
+          })
+        }
       },
       fail: () => { Taro.hideLoading(); toast.error('下载失败') },
     })
@@ -93,7 +110,7 @@ export default function VideoStatusPage() {
         {isProcessing && (
           <HudCard>
             <View className="proc">
-              <Text className="proc-icon">🎬</Text>
+              <View className="proc-icon"><Icon name="film" size={32} color="var(--color-primary-light)" /></View>
               <View className="proc-bars">
                 <View className="b" /><View className="b" /><View className="b" /><View className="b" /><View className="b" />
               </View>
@@ -108,7 +125,7 @@ export default function VideoStatusPage() {
             <HudCard>
               <View className="player">
                 <View className="player-btn" onClick={playing ? pause : play}>
-                  <Text>{playing ? '⏸' : '▶'}</Text>
+                  <Icon name={playing ? 'pause' : 'play'} size={22} color="var(--color-primary-light)" />
                 </View>
                 <View className="player-info">
                   <Text className="player-title">音频已就绪</Text>
@@ -133,7 +150,10 @@ export default function VideoStatusPage() {
         {isFailed && (
           <View className="status-page__actions">
             <HudCard>
-              <Text className="status-page__error-msg">⚠ {status?.error_msg ?? '处理失败，请重试'}</Text>
+              <View className="status-page__error-row">
+                <Icon name="warn" size={20} color="var(--color-error)" />
+                <Text className="status-page__error-msg">{status?.error_msg ?? '处理失败，请重试'}</Text>
+              </View>
             </HudCard>
             <GlowButton onClick={() => Taro.navigateBack()} variant="danger" size="md" fullWidth>返回重试</GlowButton>
           </View>

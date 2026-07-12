@@ -40,15 +40,32 @@ func (s *ScriptService) BuildPrompt(req model.ScriptGenerateRequest) string {
 		typeName = "通用"
 	}
 
-	if req.Mode == "domain" {
+	personaLine := ""
+	if req.Persona != "" {
+		personaLine = fmt.Sprintf("创作者人设：%s。", req.Persona)
+	}
+
+	// Template mode: use the template's content_structure as the format blueprint
+	if req.TemplateStructure != "" {
 		return fmt.Sprintf(
-			"你是一位专业的口播文案创作者。请为【%s】领域创作一段%d秒的%s风格口播文案，围绕关键词：%s。内容类型：%s。要求：自然流畅，适合口播朗读，分段清晰，每段不超过50字。直接输出文案内容，不要加标题或说明。",
-			req.Domain, req.DurationSec, styleName, req.Keywords, typeName,
+			"你是一位专业的口播文案创作者。%s请围绕主题「%s」，严格按照以下内容结构创作一段%d秒的口播文案：\n\n%s\n\n要求：自然流畅，适合口播朗读，分段清晰，每段不超过50字。直接输出文案内容，不要加标题或说明。",
+			personaLine, req.Topic, req.DurationSec, req.TemplateStructure,
+		)
+	}
+
+	if req.Mode == "domain" {
+		kw := req.Keywords
+		if kw == "" {
+			kw = req.Domain
+		}
+		return fmt.Sprintf(
+			"你是一位专业的口播文案创作者。%s请为【%s】领域创作一段%d秒的%s风格口播文案，围绕关键词：%s。内容类型：%s。要求：自然流畅，适合口播朗读，分段清晰，每段不超过50字。直接输出文案内容，不要加标题或说明。",
+			personaLine, req.Domain, req.DurationSec, styleName, kw, typeName,
 		)
 	}
 	return fmt.Sprintf(
-		"你是一位专业的口播文案创作者。请创作一段%d秒的%s风格口播文案，主题：%s。内容类型：%s。要求：自然流畅，适合口播朗读，分段清晰，每段不超过50字。直接输出文案内容，不要加标题或说明。",
-		req.DurationSec, styleName, req.Topic, typeName,
+		"你是一位专业的口播文案创作者。%s请创作一段%d秒的%s风格口播文案，主题：%s。内容类型：%s。要求：自然流畅，适合口播朗读，分段清晰，每段不超过50字。直接输出文案内容，不要加标题或说明。",
+		personaLine, req.DurationSec, styleName, req.Topic, typeName,
 	)
 }
 

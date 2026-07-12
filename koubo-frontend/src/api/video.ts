@@ -1,5 +1,5 @@
 import type { ApiResponse, VideoStatus, FrameMarker } from '../types/api'
-import { apiGet, apiUpload } from './client'
+import { apiGet, apiUpload, apiDelete } from './client'
 
 export async function getVideoStatus(videoId: string): Promise<ApiResponse<VideoStatus>> {
   return apiGet<VideoStatus>(`/api/video/${videoId}/status`)
@@ -29,6 +29,10 @@ export interface VideoListItem {
   error_msg?: string
   created_at: string
   completed_at?: string
+}
+
+export async function deleteVideo(videoId: string): Promise<ApiResponse<void>> {
+  return apiDelete<void>(`/api/video/${videoId}`)
 }
 
 export async function listVideos(limit = 20, offset = 0): Promise<ApiResponse<VideoListItem[]> & { total?: number }> {

@@ -3,26 +3,33 @@
 .edit-page {
   min-height: 100vh; display: flex; flex-direction: column;
 
-  &__meta { display: flex; align-items: center; gap: var(--space-1); padding: var(--space-3) var(--space-4); background: var(--bg-base); border-bottom: 0.5px solid var(--border-separator); }
+  &__meta {
+    display: flex; align-items: center; gap: var(--space-1);
+    padding: var(--space-3) var(--space-4);
+    background: var(--bg-surface);
+    border-bottom: 0.5px solid var(--border-separator);
+  }
   &__stat { font-family: var(--font-mono); font-size: var(--text-sm); color: var(--color-text-2); }
-  &__stat--bold { font-weight: 600; color: var(--color-primary); }
+  &__stat--bold { font-weight: 600; color: var(--color-primary-light); }
   &__stat-sep { color: var(--color-text-4); margin: 0 2px; }
 
   &__editor-wrap { flex: 1; padding: var(--space-4); }
-  &__editor { width: 100%; min-height: 55vh; font-size: 18px; line-height: 1.8; color: var(--color-text-1); background: transparent; border: none; outline: none;
+  &__editor {
+    width: 100%; min-height: 55vh; font-size: 18px; line-height: 1.85;
+    color: var(--color-text-1); background: transparent; border: none; outline: none;
     &::placeholder { color: var(--color-text-4); }
   }
 
   &__btm {
     display: flex; align-items: center; gap: var(--space-3);
     padding: var(--space-3) var(--space-4);
-    background: var(--bg-base);
+    background: var(--bg-surface);
     border-top: 0.5px solid var(--border-separator);
   }
   &__save {
     font-size: var(--text-base); color: var(--color-text-2); padding: 10px 20px;
     border-radius: var(--radius-md); font-weight: 500;
-    border: 1px solid var(--border-default); white-space: nowrap;
-    &:active { color: var(--color-success); border-color: var(--color-success); }
+    background: #F5F5F5; white-space: nowrap;
+    &:active { color: var(--color-success); }
   }
 }

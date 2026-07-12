@@ -36,3 +36,9 @@ func (r *TemplateRepo) IncrementUsage(ctx context.Context, id string) error {
 		Where("id = ?", id).
 		UpdateColumn("usage_count", gorm.Expr("usage_count + 1")).Error
 }
+
+func (r *TemplateRepo) GetByID(ctx context.Context, id string) (*model.Template, error) {
+	var t model.Template
+	err := r.db.WithContext(ctx).Where("id = ?", id).First(&t).Error
+	return &t, err
+}

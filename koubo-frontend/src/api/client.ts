@@ -27,6 +27,25 @@ export async function apiPost<T>(path: string, body: unknown): Promise<ApiRespon
   return res.data
 }
 
+export async function apiDelete<T>(path: string): Promise<ApiResponse<T>> {
+  const res = await Taro.request<ApiResponse<T>>({
+    url: `${API_BASE}${path}`,
+    method: 'DELETE',
+    header: { 'Content-Type': 'application/json', ...getAuthHeader() },
+  })
+  return res.data
+}
+
+export async function apiPatch<T>(path: string, body: unknown): Promise<ApiResponse<T>> {
+  const res = await Taro.request<ApiResponse<T>>({
+    url: `${API_BASE}${path}`,
+    method: 'PUT',
+    data: body,
+    header: { 'Content-Type': 'application/json', ...getAuthHeader() },
+  })
+  return res.data
+}
+
 export async function apiUpload<T>(
   path: string,
   filePath: string,

@@ -1,0 +1,15 @@
+@font-face {
+  font-family: 'remixicon';
+  src: url('../../assets/fonts/remixicon.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+}
+
+.ri-icon {
+  font-family: 'remixicon' !important;
+  font-style: normal;
+  display: inline-block;
+  line-height: 1;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}

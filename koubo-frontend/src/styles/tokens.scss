@@ -1,48 +1,77 @@
 page {
-  /* ── Neutral palette ── */
-  --bg-base: #FAFAF8;
+  /* ── 小红书浅色底 ── */
+  --bg-base: #F5F5F5;
   --bg-surface: #FFFFFF;
   --bg-elevated: #FFFFFF;
 
-  /* ── Accent ── */
-  --color-primary: #2C2C2E;
-  --color-primary-dim: rgba(44, 44, 46, 0.06);
-  --color-primary-soft: rgba(44, 44, 46, 0.10);
-  --color-danger: #C44;
-  --color-danger-dim: rgba(204, 68, 68, 0.08);
+  /* ── Glass (淡化，浅色主题用不上强玻璃) ── */
+  --bg-glass: rgba(0, 0, 0, 0.04);
+  --bg-glass-hover: rgba(0, 0, 0, 0.06);
+  --bg-glass-strong: rgba(0, 0, 0, 0.08);
+
+  /* ── 小红书红 ── */
+  --color-primary: #FE2C55;
+  --color-primary-light: #FF607A;
+  --color-primary-dark: #E0163E;
+  --color-primary-dim: rgba(254, 44, 85, 0.08);
+  --color-primary-soft: rgba(254, 44, 85, 0.15);
+  --color-primary-glow: rgba(254, 44, 85, 0.25);
+  --gradient-primary: linear-gradient(135deg, #FE2C55 0%, #FF607A 100%);
+  --gradient-brand: linear-gradient(135deg, #FE2C55 0%, #FF607A 100%);
+
+  /* ── Coral ── */
+  --color-coral: #FE2C55;
+  --color-coral-light: #FF607A;
+  --color-coral-dim: rgba(254, 44, 85, 0.08);
+
+  /* ── Cyan ── */
+  --color-cyan: #00C8D4;
+  --color-cyan-dim: rgba(0, 200, 212, 0.12);
 
   /* ── Borders ── */
-  --border-default: rgba(0, 0, 0, 0.07);
-  --border-active: rgba(44, 44, 46, 0.20);
-  --border-separator: rgba(0, 0, 0, 0.08);
+  --border-default: rgba(0, 0, 0, 0.06);
+  --border-glass: rgba(0, 0, 0, 0.08);
+  --border-active: rgba(254, 44, 85, 0.40);
+  --border-separator: rgba(0, 0, 0, 0.06);
 
   /* ── Text ── */
-  --color-text-1: #1C1C1E;
-  --color-text-2: #48484A;
-  --color-text-3: #8E8E93;
-  --color-text-4: #C7C7CC;
+  --color-text-1: #1A1A1A;
+  --color-text-2: #555555;
+  --color-text-3: #999999;
+  --color-text-4: #BBBBBB;
 
   /* ── Semantic ── */
-  --color-success: #3A8;
-  --color-success-dim: rgba(51, 170, 136, 0.10);
-  --color-error: #C44;
-  --color-error-dim: rgba(204, 68, 68, 0.10);
-  --color-warning: #D80;
-  --color-warning-dim: rgba(221, 136, 0, 0.10);
+  --color-success: #00B96B;
+  --color-success-dim: rgba(0, 185, 107, 0.10);
+  --color-error: #FE2C55;
+  --color-error-dim: rgba(254, 44, 85, 0.08);
+  --color-warning: #FF9F0A;
+  --color-warning-dim: rgba(255, 159, 10, 0.10);
+  --color-danger: #FE2C55;
+  --color-danger-dim: rgba(254, 44, 85, 0.08);
+
+  /* ── Shadows ── */
+  --shadow-sm: 0 1px 4px rgba(0, 0, 0, 0.06);
+  --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.08);
+  --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.10);
+  --shadow-soft: 0 2px 8px rgba(0, 0, 0, 0.06);
+  --shadow-glow-sm: 0 4px 16px rgba(254, 44, 85, 0.20);
+  --shadow-glow-md: 0 8px 24px rgba(254, 44, 85, 0.25);
 
   /* ── Spacing ── */
-  --space-1: 4px; --space-2: 8px; --space-3: 12px;
+  --space-1: 4px;  --space-2: 8px;  --space-3: 12px;
   --space-4: 16px; --space-5: 20px; --space-6: 24px;
-  --space-8: 32px; --space-10: 40px;
+  --space-8: 32px; --space-10: 40px; --space-16: 64px;
 
   /* ── Radius ── */
-  --radius-sm: 8px; --radius-md: 10px;
-  --radius-lg: 14px; --radius-xl: 18px; --radius-full: 9999px;
+  --radius-sm: 8px; --radius-md: 12px;
+  --radius-lg: 16px; --radius-xl: 20px; --radius-2xl: 24px;
+  --radius-full: 9999px;
 
-  /* ── Type ── */
-  --text-xs: 11px; --text-sm: 13px; --text-base: 15px;
-  --text-md: 17px; --text-lg: 20px;
-  --text-xl: 22px; --text-2xl: 28px; --text-3xl: 34px;
+  /* ── Type scale ── */
+  --text-xs: 11px;  --text-sm: 13px;  --text-base: 15px;
+  --text-md: 17px;  --text-lg: 20px;  --text-xl: 22px;
+  --text-2xl: 28px; --text-3xl: 34px; --text-4xl: 40px;
 
   /* ── Fonts ── */
   --font-display: -apple-system, 'PingFang SC', sans-serif;
@@ -50,18 +79,13 @@ page {
   --font-teleprompter: 'STSong', 'Songti SC', serif;
   --font-mono: 'SF Mono', 'Menlo', monospace;
 
-  /* ── Shadows ── */
-  --shadow-sm: 0 1px 2px rgba(0,0,0,.04);
-  --shadow-md: 0 2px 6px rgba(0,0,0,.06);
-  --shadow-lg: 0 8px 24px rgba(0,0,0,.08);
-
   /* ── Motion ── */
-  --duration-fast: 180ms; --duration-normal: 280ms;
-  --duration-slow: 400ms;
+  --duration-fast: 180ms; --duration-normal: 280ms; --duration-slow: 400ms;
   --ease-out: cubic-bezier(.25,.1,.25,1);
   --ease-in-out: cubic-bezier(.42,0,.58,1);
+  --ease-spring: cubic-bezier(.32,.72,0,1);
 
-  /* ── Z ── */
+  /* ── Z-index ── */
   --z-base: 0; --z-card: 1; --z-header: 10;
   --z-overlay: 100; --z-modal: 200; --z-toast: 300;
 }

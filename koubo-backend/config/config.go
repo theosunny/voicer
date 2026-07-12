@@ -3,17 +3,20 @@ package config
 import "os"
 
 type Config struct {
-	DatabaseURL  string
-	RedisURL     string
-	OSSBucket    string
-	OSSRegion    string
-	OSSKeyID     string
-	OSSKeySecret string
-	LLMAPIKey    string
-	LLMBaseURL   string
-	ASRAppID     string
-	ASRToken     string
-	Port         string
+	DatabaseURL   string
+	RedisURL      string
+	OSSBucket     string
+	OSSRegion     string
+	OSSKeyID      string
+	OSSKeySecret  string
+	LLMAPIKey     string
+	LLMBaseURL    string
+	ASRAppID      string
+	ASRToken      string
+	WXAppID       string
+	WXAppSecret   string
+	Port          string
+	AgentBaseURL  string // qianmian-agent base URL, e.g. http://localhost:8000
 }
 
 func Load() Config {
@@ -32,7 +35,10 @@ func Load() Config {
 		LLMBaseURL:   mustEnv("LLM_BASE_URL"),
 		ASRAppID:     os.Getenv("ASR_APP_ID"),
 		ASRToken:     os.Getenv("ASR_TOKEN"),
+		WXAppID:      os.Getenv("WX_APP_ID"),
+		WXAppSecret:  os.Getenv("WX_APP_SECRET"),
 		Port:         port,
+		AgentBaseURL: os.Getenv("AGENT_BASE_URL"), // optional; falls back to direct LLM if empty
 	}
 }
 

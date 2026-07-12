@@ -1,8 +1,11 @@
 export interface Template {
   id: string
   title: string
+  description: string
   domain: string
   content_structure: string
+  duration: '30s' | '60s' | '3min' | '5min' | '10min' | '15min'
+  script_type: string
   usage_count: number
   is_featured: boolean
   created_at?: string
@@ -36,10 +39,15 @@ export interface ASRPosition {
 export interface GenerateScriptRequest {
   topic: string
   domain: string
+  keywords?: string
   script_type: string
   style: string
-  duration: '30s' | '60s' | '3min'
+  duration: '30s' | '60s' | '3min' | '5min' | '10min' | '15min'
+  duration_sec?: number
   template_id?: string
+  persona?: string
+  persona_type?: string
+  user_id?: string
 }
 
 export interface SaveDraftRequest {

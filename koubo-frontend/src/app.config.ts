@@ -2,6 +2,7 @@
 
 export default defineAppConfig({
   pages: [
+    'pages/login/index',
     'pages/index/index',
     'pages/create/index',
     'pages/videos/index',
@@ -12,16 +13,16 @@ export default defineAppConfig({
     'pages/video/status',
   ],
   window: {
-    backgroundTextStyle: 'light',
-    navigationBarBackgroundColor: '#F0EDE8',
+    backgroundTextStyle: 'dark',
+    navigationBarBackgroundColor: '#FFFFFF',
     navigationBarTitleText: '口播创作',
     navigationBarTextStyle: 'black',
-    backgroundColor: '#F0EDE8',
+    backgroundColor: '#F5F5F5',
   },
   tabBar: {
-    color: '#A8A8B4',
-    selectedColor: '#5B6ABF',
-    backgroundColor: 'rgba(248,246,242,0.95)',
+    color: '#999999',
+    selectedColor: '#FE2C55',
+    backgroundColor: '#FFFFFF',
     borderStyle: 'white',
     list: [
       { pagePath: 'pages/index/index', text: '首页', iconPath: 'assets/icons/home.png', selectedIconPath: 'assets/icons/home-active.png' },
@@ -36,6 +37,9 @@ export default defineAppConfig({
     },
     'scope.record': {
       desc: '需要录制音频进行语音识别',
+    },
+    'scope.writePhotosAlbum': {
+      desc: '需要保存视频到相册',
     },
   },
 })

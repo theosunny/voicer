@@ -1,43 +1,47 @@
-import { View, Text, Textarea, ScrollView } from '@tarojs/components'
+import { View, Text, Textarea, ScrollView, Input } from '@tarojs/components'
 import Taro, { useLoad, useRouter } from '@tarojs/taro'
 import { useState, useEffect } from 'react'
-import Chip from '../../components/chip'
 import GlowButton from '../../components/glow-button'
 import Toast, { useToast } from '../../components/toast'
 import { useSSE } from '../../hooks/useSSE'
+import { saveDraft } from '../../api/script'
 import type { GenerateScriptRequest } from '../../types/api'
 import './generate.scss'
 
-const DOMAINS = ['美妆', '科技', '生活', '美食', '知识', '母婴', '健康']
-const SCRIPT_TYPES = ['产品推广', '个人感悟', '生活分享', '知识科普', '情感故事']
-const STYLES = ['轻松随性', '专业权威', '情感共鸣', '幽默风趣']
-const DURATIONS: Array<{ label: string; value: GenerateScriptRequest['duration'] }> = [
-  { label: '30秒', value: '30s' },
-  { label: '60秒', value: '60s' },
-  { label: '3分钟', value: '3min' },
+const SCRIPT_TYPES = [
+  { value: 'promo',   label: '产品种草', desc: '安利好物，引发购买欲' },
+  { value: 'insight', label: '干货科普', desc: '知识拆解，建立专业感' },
+  { value: 'life',    label: '情感共鸣', desc: '真实故事，引发共情' },
 ]
-const DOMAIN_KEYWORDS: Record<string, string[]> = {
-  美妆: ['护肤', '口红', '底妆', '彩妆', '精华'],
-  科技: ['AI', '手机', '耳机', '智能家居', '芯片'],
-  生活: ['收纳', '健康', '早起', '效率', '好物'],
-  美食: ['食谱', '探店', '零食', '减脂餐', '甜品'],
-  知识: ['读书', '思维', '历史', '心理学', '职场'],
-}
 
-type Mode = 'domain' | 'free'
+const PERSONAS = [
+  { value: 'expert',  label: '行业专家',   desc: '权威专业，有深度',     prompt: '你是该领域的权威专家，语气专业、有深度、逻辑清晰，用数据和案例建立信任感。' },
+  { value: 'student', label: '避坑课代表', desc: '揭误区，帮粉丝省钱',   prompt: '你是热心的避坑课代表，专门揭露常见误区，语气亲切又有说服力，帮粉丝少走弯路。' },
+  { value: 'friend',  label: '邻家小姐姐', desc: '真实亲切，像闺蜜分享', prompt: '你是真实可爱的邻家小姐姐，像和闺蜜分享心得一样自然亲切，真实感拉满。' },
+  { value: 'humor',   label: '幽默段子手', desc: '搞笑有梗，让人记住你', prompt: '你是反应快、段子多的幽默达人，用轻松搞笑的方式讲道理，让人在笑中记住你的观点。' },
+]
+
+const DURATIONS = [
+  { value: '30s',    label: '30秒' },
+  { value: '60s',    label: '60秒' },
+  { value: '3min',   label: '3分钟' },
+  { value: 'custom', label: '自定义' },
+]
 
 export default function GeneratePage() {
   const router = useRouter()
   const toast = useToast()
-  const [mode, setMode] = useState<Mode>('domain')
-  const [domain, setDomain] = useState('美妆')
-  const [freeTopic, setFreeTopic] = useState('')
-  const [scriptType, setScriptType] = useState('产品推广')
-  const [style, setStyle] = useState('轻松随性')
-  const [duration, setDuration] = useState<GenerateScriptRequest['duration']>('60s')
+
+  const [topic, setTopic] = useState('')
+  const [scriptType, setScriptType] = useState('promo')
+  const [persona, setPersona] = useState('friend')
+  const [duration, setDuration] = useState<string>('60s')
+  const [customMinutes, setCustomMinutes] = useState('')
+
   const [sseEnabled, setSseEnabled] = useState(false)
   const [requestBody, setRequestBody] = useState<GenerateScriptRequest | null>(null)
   const [generationComplete, setGenerationComplete] = useState(false)
+  const [saving, setSaving] = useState(false)
 
   const { fullText, done, error, scriptId } = useSSE(
     '/api/script/generate', requestBody, sseEnabled && requestBody !== null,
@@ -45,8 +49,30 @@ export default function GeneratePage() {
 
   useLoad(() => {
     Taro.setNavigationBarTitle({ title: 'AI 文案' })
-    const qDomain = router.params.domain
-    if (qDomain && DOMAINS.includes(qDomain)) setDomain(qDomain)
+    const { template_content, template_duration, template_script_type, persona: tplPersona, persona_type: tplPersonaType } = router.params
+
+    if (template_content) {
+      const decodedTopic = decodeURIComponent(template_content)
+      const decodedPersona = tplPersona ? decodeURIComponent(tplPersona) : ''
+      const dur = (template_duration as GenerateScriptRequest['duration']) || '60s'
+      const sType = template_script_type || 'promo'
+      const userID = Taro.getStorageSync('user_id') as string || ''
+      setTopic(decodedTopic)
+      setDuration(dur)
+      setScriptType(sType)
+      setRequestBody({
+        topic: decodedTopic,
+        domain: '',
+        script_type: sType,
+        style: 'casual',
+        duration: dur,
+        template_id: router.params.template_id,
+        persona: decodedPersona,
+        persona_type: tplPersonaType || 'general',
+        user_id: userID,
+      })
+      setSseEnabled(true)
+    }
   })
 
   useEffect(() => {
@@ -57,94 +83,71 @@ export default function GeneratePage() {
     if (error) { setSseEnabled(false); toast.error('生成失败：' + error) }
   }, [error])
 
-  function handleEdit() {
-    if (scriptId) Taro.navigateTo({ url: `/pages/script/edit?script_id=${scriptId}` })
+  function handleGenerate() {
+    const t = topic.trim()
+    if (!t) { toast.error('先告诉 AI 你想聊什么吧'); return }
+    let durationSec = 0
+    if (duration === 'custom') {
+      const mins = parseInt(customMinutes)
+      if (!mins || mins <= 0) { toast.error('请输入自定义时长（分钟）'); return }
+      durationSec = mins * 60
+    }
+    const personaObj = PERSONAS.find((p) => p.value === persona)!
+    const userID = Taro.getStorageSync('user_id') as string || ''
+    setRequestBody({
+      topic: t,
+      domain: '',
+      script_type: scriptType,
+      style: 'casual',
+      duration: duration === 'custom' ? '3min' : (duration as GenerateScriptRequest['duration']),
+      duration_sec: durationSec || undefined,
+      template_id: router.params.template_id,
+      persona: personaObj.prompt,
+      persona_type: personaObj.value,
+      user_id: userID,
+    })
+    setSseEnabled(true)
   }
+
+  function handleStop() {
+    setSseEnabled(false)
+    setGenerationComplete(false)
+    setRequestBody(null)
+  }
+
+  async function handleSave() {
+    if (saving || !fullText) return
+    setSaving(true)
+    try {
+      const res = await saveDraft({
+        id: scriptId ?? undefined,
+        title: (requestBody?.topic ?? '').slice(0, 40) || '口播文案',
+        content: fullText,
+        script_type: requestBody?.script_type ?? 'promo',
+        style: requestBody?.style ?? 'casual',
+      })
+      if (res.success) toast.success('已保存')
+      else toast.error('保存失败')
+    } catch { toast.error('网络错误') }
+    finally { setSaving(false) }
+  }
+
   function handleRecord() {
     if (scriptId) Taro.navigateTo({ url: `/pages/record/index?script_id=${scriptId}` })
-  }
-  function handleGenerate() {
-    const topic = mode === 'domain' ? domain : freeTopic.trim()
-    if (!topic) { toast.error('请选择领域或输入主题'); return }
-    setRequestBody({ topic, domain: mode === 'domain' ? domain : '', script_type: scriptType, style, duration, template_id: router.params.template_id })
-    setSseEnabled(true)
   }
 
   const isStreaming = sseEnabled && !done && !error
   const showTerminal = sseEnabled || generationComplete
 
-  return (
-    <View className="page-root generate-page">
-      <Toast />
-
-      {!showTerminal ? (
-        <ScrollView scrollY className="generate-page__form">
-          <View className="generate-page__segment">
-            <View className={`seg-btn ${mode === 'domain' ? 'seg-btn--active' : ''}`} onClick={() => setMode('domain')}>领域推荐</View>
-            <View className={`seg-btn ${mode === 'free' ? 'seg-btn--active' : ''}`} onClick={() => setMode('free')}>自由输入</View>
-          </View>
-
-          {mode === 'domain' && (
-            <View className="generate-page__section">
-              <Text className="generate-page__label">选择领域</Text>
-              <View className="generate-page__chips">
-                {DOMAINS.map((d) => <Chip key={d} label={d} selected={domain === d} onSelect={setDomain} />)}
-              </View>
-              {DOMAIN_KEYWORDS[domain] && (
-                <>
-                  <Text className="generate-page__label generate-page__label--sub">热门关键词</Text>
-                  <View className="generate-page__chips">
-                    {DOMAIN_KEYWORDS[domain].map((kw) => (
-                      <Chip key={kw} label={kw} onSelect={(k) => setFreeTopic((prev) => prev ? prev + ' ' + k : k)} />
-                    ))}
-                  </View>
-                </>
-              )}
-            </View>
-          )}
-
-          {mode === 'free' && (
-            <View className="generate-page__section">
-              <Text className="generate-page__label">输入主题</Text>
-              <View className="generate-page__textarea-wrap">
-                <Textarea className="generate-page__textarea" value={freeTopic} onInput={(e) => setFreeTopic(e.detail.value)} placeholder="输入你想创作的主题" maxlength={50} autoHeight />
-                <Text className="generate-page__char-count">{freeTopic.length}/50</Text>
-              </View>
-            </View>
-          )}
-
-          <View className="generate-page__section">
-            <Text className="generate-page__label">内容类型</Text>
-            <View className="generate-page__chips">
-              {SCRIPT_TYPES.map((t) => <Chip key={t} label={t} selected={scriptType === t} onSelect={setScriptType} />)}
-            </View>
-          </View>
-
-          <View className="generate-page__section">
-            <Text className="generate-page__label">表达风格</Text>
-            <View className="generate-page__chips">
-              {STYLES.map((s) => <Chip key={s} label={s} selected={style === s} onSelect={setStyle} />)}
-            </View>
-          </View>
-
-          <View className="generate-page__section">
-            <Text className="generate-page__label">视频时长</Text>
-            <View className="generate-page__duration-row">
-              {DURATIONS.map((d) => (
-                <View key={d.value} className={`dur-btn ${duration === d.value ? 'dur-btn--active' : ''}`} onClick={() => setDuration(d.value)}>{d.label}</View>
-              ))}
-            </View>
-          </View>
-
-          <View className="generate-page__submit">
-            <GlowButton onClick={handleGenerate} size="lg" fullWidth>生成文案</GlowButton>
-          </View>
-        </ScrollView>
-      ) : (
+  if (showTerminal) {
+    return (
+      <View className="page-root generate-page">
+        <Toast />
         <View className="generate-page__stream">
           <View className="stream-hd">
             <View className={`stream-hd__dot${done ? ' stream-hd__dot--done' : ''}`} />
             <Text className="stream-hd__title">{done ? '生成完成' : 'AI 创作中…'}</Text>
+            {isStreaming && <View className="stream-hd__stop" onClick={handleStop}>停止</View>}
           </View>
           <ScrollView scrollY className="stream-bd">
             <View className="stream-bd__in">
@@ -154,21 +157,124 @@ export default function GeneratePage() {
               </Text>
             </View>
           </ScrollView>
-          <View className="stream-ft">
+          <View className="stream-ft safe-area-bottom">
             {generationComplete ? (
               <View className="stream-ft__actions">
-                <GlowButton onClick={handleEdit} size="md" variant="outline">编辑</GlowButton>
-                <GlowButton onClick={handleRecord} size="md">去录制</GlowButton>
+                <GlowButton onClick={handleSave} size="md" variant="outline" fullWidth>{saving ? '保存中…' : '保存文案'}</GlowButton>
+                <GlowButton onClick={handleRecord} size="md" fullWidth>去录制</GlowButton>
               </View>
             ) : (
               <View className="stream-ft__status">
                 <View className="stream-ft__spin" />
-                <Text>已生成 {fullText.length} 字</Text>
+                <Text className="stream-ft__count">已生成 {fullText.length} 字</Text>
               </View>
             )}
           </View>
         </View>
-      )}
+      </View>
+    )
+  }
+
+  return (
+    <View className="page-root generate-page">
+      <Toast />
+      <ScrollView scrollY className="generate-page__form">
+
+        {/* Step 1 */}
+        <View className="gen-step">
+          <View className="gen-step__hd">
+            <Text className="gen-step__num">1</Text>
+            <Text className="gen-step__title">想聊什么？</Text>
+          </View>
+          <View className="gen-topic">
+            <Textarea
+              className="gen-topic__input"
+              value={topic}
+              onInput={(e) => setTopic(e.detail.value)}
+              placeholder="输入产品名、话题或你想表达的内容&#10;例如：兰蔻小黑瓶精华、我最近发现一个护肤秘诀…"
+              maxlength={100}
+              autoHeight
+            />
+            <Text className="gen-topic__count">{topic.length}/100</Text>
+          </View>
+        </View>
+
+        {/* Step 2 */}
+        <View className="gen-step">
+          <View className="gen-step__hd">
+            <Text className="gen-step__num">2</Text>
+            <Text className="gen-step__title">内容类型</Text>
+          </View>
+          <View className="gen-row3">
+            {SCRIPT_TYPES.map((t) => (
+              <View
+                key={t.value}
+                className={`gen-option${scriptType === t.value ? ' gen-option--active' : ''}`}
+                onClick={() => setScriptType(t.value)}
+              >
+                <Text className="gen-option__label">{t.label}</Text>
+                <Text className="gen-option__desc">{t.desc}</Text>
+              </View>
+            ))}
+          </View>
+        </View>
+
+        {/* Step 3 */}
+        <View className="gen-step">
+          <View className="gen-step__hd">
+            <Text className="gen-step__num">3</Text>
+            <Text className="gen-step__title">说话人设</Text>
+          </View>
+          <View className="gen-row2">
+            {PERSONAS.map((p) => (
+              <View
+                key={p.value}
+                className={`gen-option gen-option--persona${persona === p.value ? ' gen-option--active' : ''}`}
+                onClick={() => setPersona(p.value)}
+              >
+                <Text className="gen-option__label">{p.label}</Text>
+                <Text className="gen-option__desc">{p.desc}</Text>
+              </View>
+            ))}
+          </View>
+        </View>
+
+        {/* Step 4 */}
+        <View className="gen-step">
+          <View className="gen-step__hd">
+            <Text className="gen-step__num">4</Text>
+            <Text className="gen-step__title">视频时长</Text>
+          </View>
+          <View className="gen-durations">
+            {DURATIONS.map((d) => (
+              <View
+                key={d.value}
+                className={`gen-dur${duration === d.value ? ' gen-dur--active' : ''}`}
+                onClick={() => setDuration(d.value)}
+              >
+                {d.label}
+              </View>
+            ))}
+          </View>
+          {duration === 'custom' && (
+            <View className="gen-custom-dur">
+              <Input
+                className="gen-custom-dur__input"
+                type="number"
+                value={customMinutes}
+                onInput={(e) => setCustomMinutes(e.detail.value)}
+                placeholder="输入分钟数"
+              />
+              <Text className="gen-custom-dur__unit">分钟</Text>
+            </View>
+          )}
+        </View>
+
+        <View className="gen-cta">
+          <GlowButton onClick={handleGenerate} size="lg" fullWidth>一键生成爆款文案</GlowButton>
+        </View>
+
+      </ScrollView>
     </View>
   )
 }

@@ -39,6 +39,15 @@ func (r *VideoRepo) ListByUser(ctx context.Context, userID string, limit, offset
 	return videos, total, nil
 }
 
+func (r *VideoRepo) Delete(ctx context.Context, id string) (rawVideoURL string, err error) {
+	var v model.Video
+	if err = r.db.WithContext(ctx).Where("id = ?", id).First(&v).Error; err != nil {
+		return "", err
+	}
+	rawVideoURL = v.RawVideoURL
+	return rawVideoURL, r.db.WithContext(ctx).Delete(&model.Video{}, "id = ?", id).Error
+}
+
 func (r *VideoRepo) UpdateRawURL(ctx context.Context, id, rawURL string) error {
 	return r.db.WithContext(ctx).Model(&model.Video{}).Where("id = ?", id).
 		Update("raw_video_url", rawURL).Error
